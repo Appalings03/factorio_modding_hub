@@ -243,7 +243,7 @@ Exemple de sortie :
 ```
 ╔══════════════════════════════════════╗
 ║   Factorio Modding Hub               ║
-║   Centralisateur de prototypes        ║
+║   Centralisateur de prototypes       ║
 ╚══════════════════════════════════════╝
 
 ▶ État de la base de données
