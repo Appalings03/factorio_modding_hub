@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Recherche — Factorio Modding Hub{% endblock %}
+
+{% block content %}
+<div class="page-search">
+
+  <section class="search-bar-section">
+    <form class="search-form" action="{{ url_for('search_page') }}" method="get">
+      <input type="text" name="q" class="search-input-main" autofocus
+             placeholder="Nom de prototype, propriété, type…"
+             value="{{ query or '' }}"
+             autocomplete="off" id="main-search-input">
+
+      <div class="search-filters">
+        <select name="typename" class="filter-select">
+          <option value="">Tous les types</option>
+          {% for tn in typenames %}
+            <option value="{{ tn }}" {% if tn == current_typename %}selected{% endif %}>
+              {{ tn }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <select name="v" class="filter-select">
+          {% for v in versions %}
+            <option value="{{ v.id }}" {% if v.id == version_id %}selected{% endif %}>
+              {{ v.version_tag }}{% if v.is_latest %} ★{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+
+        <button type="submit" class="btn btn-primary">Rechercher</button>
+      </div>
+    </form>
+  </section>
+
+  {% if results is defined %}
+    <section class="search-results">
+      <div class="results-header">
+        {% if query %}
+          <span class="results-count">
+            <strong>{{ total }}</strong> résultat{% if total > 1 %}s{% endif %}
+            pour <em>« {{ query }} »</em>
+          </span>
+        {% else %}
+          <span class="results-count">
+            <strong>{{ total }}</strong> prototype{% if total > 1 %}s{% endif %}
+          </span>
+        {% endif %}
+      </div>
+
+      {% if results %}
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Type</th>
+              <th>Nom localisé</th>
+              <th>Subgroup</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in results %}
+            <tr>
+              <td>
+                <a href="{{ url_for('prototype_detail', typename=r.typename, name=r.name) }}"
+                   class="proto-link">{{ r.name }}</a>
+              </td>
+              <td>
+                <a href="{{ url_for('search_page', typename=r.typename, v=version_id) }}"
+                   class="type-badge">{{ r.typename }}</a>
+              </td>
+              <td class="muted">{{ r.localised_name or '—' }}</td>
+              <td class="muted">{{ r.subgroup or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if pages > 1 %}
+        <nav class="pagination">
+          {% if page > 1 %}
+            <a href="{{ url_for('search_page', q=query, typename=current_typename, v=version_id, page=page-1) }}"
+               class="page-btn">← Précédent</a>
+          {% endif %}
+          <span class="page-info">Page {{ page }} / {{ pages }}</span>
+          {% if page < pages %}
+            <a href="{{ url_for('search_page', q=query, typename=current_typename, v=version_id, page=page+1) }}"
+               class="page-btn">Suivant →</a>
+          {% endif %}
+        </nav>
+        {% endif %}
+
+      {% else %}
+        <div class="empty-state">
+          <p>Aucun prototype trouvé{% if query %} pour <em>« {{ query }} »</em>{% endif %}.</p>
+          <p class="muted">Conseil : utilisez <code>*</code> pour une recherche par préfixe (ex: <code>iron*</code>)</p>
+        </div>
+      {% endif %}
+    </section>
+  {% else %}
+    {# Première visite — affiche les types disponibles #}
+    <section class="type-grid" id="types">
+      <h2 class="section-title">Types de prototypes disponibles</h2>
+      <div class="type-cards">
+        {% for tn in typenames %}
+          <a href="{{ url_for('search_page', typename=tn, v=version_id) }}"
+             class="type-card">{{ tn }}</a>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Suggestions d'autocomplétion sur le champ principal
+  initAutocomplete('main-search-input', '/api/autocomplete');
+</script>
+{% endblock %}

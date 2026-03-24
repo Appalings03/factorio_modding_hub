@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}{{ prototype.typename }}/{{ prototype.name }} — FMH{% endblock %}
+
+{% block content %}
+<div class="page-detail">
+
+  {# ── Fil d'Ariane ── #}
+  <nav class="breadcrumb">
+    <a href="{{ url_for('search_page') }}">Recherche</a>
+    <span class="bc-sep">›</span>
+    <a href="{{ url_for('search_page', typename=prototype.typename, v=version_id) }}">
+      {{ prototype.typename }}
+    </a>
+    <span class="bc-sep">›</span>
+    <span>{{ prototype.name }}</span>
+  </nav>
+
+  {# ── En-tête ── #}
+  <header class="proto-header">
+    <div class="proto-title-block">
+      <h1 class="proto-name">{{ prototype.name }}</h1>
+      <span class="proto-type-badge">{{ prototype.typename }}</span>
+      {% if prototype.localised_name %}
+        <span class="proto-localised">{{ prototype.localised_name }}</span>
+      {% endif %}
+    </div>
+    <div class="proto-actions">
+      <a href="{{ url_for('compare_page', typename=prototype.typename, name=prototype.name) }}"
+         class="btn btn-secondary">Comparer les versions</a>
+    </div>
+  </header>
+
+  <div class="detail-layout">
+
+    {# ── Colonne gauche : propriétés ── #}
+    <div class="detail-main">
+
+      {# Héritage de type #}
+      {% if type_ancestors %}
+      <section class="detail-section">
+        <h2 class="section-title">Héritage</h2>
+        <div class="inheritance-chain">
+          {% for ancestor in type_ancestors | reverse %}
+            <a href="{{ url_for('search_page', typename=ancestor.typename or '', v=version_id) }}"
+               class="ancestor-link">{{ ancestor.name }}</a>
+            <span class="chain-arrow">→</span>
+          {% endfor %}
+          <span class="ancestor-link current">{{ type_info.name if type_info else prototype.typename }}</span>
+        </div>
+        {% if type_children %}
+        <div class="type-children">
+          <span class="muted">Sous-types :</span>
+          {% for child in type_children %}
+            <a href="{{ url_for('search_page', typename=child.typename or '', v=version_id) }}"
+               class="type-badge">{{ child.name }}</a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      {# Propriétés du prototype (raw_json dénormalisé) #}
+      <section class="detail-section">
+        <h2 class="section-title">Propriétés</h2>
+        <div class="props-toolbar">
+          <input type="text" id="prop-filter" placeholder="Filtrer les propriétés…"
+                 class="prop-filter-input">
+          <label class="toggle-label">
+            <input type="checkbox" id="toggle-schema" checked>
+            Afficher le schéma officiel
+          </label>
+        </div>
+
+        <table class="props-table" id="props-table">
+          <thead>
+            <tr>
+              <th>Propriété</th>
+              <th>Valeur</th>
+              <th class="schema-col">Type attendu</th>
+              <th class="schema-col">Requis</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for prop in properties %}
+            <tr class="prop-row {% if prop.schema %}has-schema{% endif %}"
+                data-key="{{ prop.key }}">
+              <td class="prop-key">
+                <code>{{ prop.key }}</code>
+                {% if prop.schema and prop.schema.is_inherited %}
+                  <span class="inherited-badge" title="Hérité de {{ prop.schema.inherited_from }}">↑</span>
+                {% endif %}
+              </td>
+              <td class="prop-value">
+                {% if prop.is_table %}
+                  <details>
+                    <summary class="table-summary">table ({{ prop.value_preview }})</summary>
+                    <pre class="json-block">{{ prop.value_text }}</pre>
+                  </details>
+                {% elif prop.is_reference %}
+                  <a href="{{ url_for('prototype_detail', typename=prop.ref_typename, name=prop.value_text) }}"
+                     class="proto-link">{{ prop.value_text }}</a>
+                {% else %}
+                  <span class="prop-scalar prop-type-{{ prop.value_type }}">{{ prop.value_text }}</span>
+                {% endif %}
+              </td>
+              <td class="prop-type schema-col">
+                {% if prop.schema %}
+                  <code class="type-str">{{ prop.schema.type_str }}</code>
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td class="prop-required schema-col">
+                {% if prop.schema %}
+                  {% if prop.schema.is_optional %}
+                    <span class="badge-optional">optionnel</span>
+                    {% if prop.schema.default_value %}
+                      <code class="default-val">{{ prop.schema.default_value }}</code>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge-required">requis</span>
+                  {% endif %}
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      {# Relations #}
+      {% if relations_from %}
+      <section class="detail-section">
+        <h2 class="section-title">Références sortantes</h2>
+        <table class="relations-table">
+          <thead>
+            <tr><th>Type</th><th>Cible</th><th>Via</th></tr>
+          </thead>
+          <tbody>
+            {% for rel in relations_from %}
+            <tr>
+              <td><span class="rel-type-badge">{{ rel.relation_type }}</span></td>
+              <td>
+                {% if rel.target_typename %}
+                  <a href="{{ url_for('prototype_detail', typename=rel.target_typename, name=rel.target_name) }}"
+                     class="proto-link">{{ rel.target_name }}</a>
+                {% else %}
+                  <code>{{ rel.target_name }}</code>
+                {% endif %}
+              </td>
+              <td class="muted"><code>{{ rel.property_path or '—' }}</code></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+      {% endif %}
+
+      {# Utilisé par #}
+      {% if relations_to %}
+      <section class="detail-section">
+        <h2 class="section-title">Utilisé par</h2>
+        <ul class="used-by-list">
+          {% for rel in relations_to %}
+            <li>
+              <a href="{{ url_for('prototype_detail', typename=rel.source_typename, name=rel.source_name) }}"
+                 class="proto-link">{{ rel.source_name }}</a>
+              <span class="muted">({{ rel.source_typename }}, via {{ rel.relation_type }})</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {# Raw JSON #}
+      <section class="detail-section">
+        <h2 class="section-title">
+          JSON brut
+          <button class="btn-copy" data-target="raw-json-block">Copier</button>
+        </h2>
+        <pre class="json-block" id="raw-json-block">{{ raw_json }}</pre>
+      </section>
+
+    </div>{# /detail-main #}
+
+    {# ── Colonne droite : annotations ── #}
+    <aside class="detail-aside">
+      <section class="aside-section">
+        <h3 class="aside-title">Mes annotations</h3>
+
+        {% if annotations %}
+          {% for annot in annotations %}
+          <div class="annotation-card">
+            <div class="annot-tags">
+              {% for tag in annot.tags %}
+                <span class="annot-tag">{{ tag }}</span>
+              {% endfor %}
+            </div>
+            <p class="annot-content">{{ annot.content }}</p>
+            <div class="annot-meta">
+              <span class="muted">{{ annot.updated_at[:10] }}</span>
+              <a href="{{ url_for('delete_annotation', annotation_id=annot.id) }}"
+                 class="annot-delete" data-confirm="Supprimer cette annotation ?">✕</a>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted">Aucune annotation.</p>
+        {% endif %}
+
+        <form class="annot-form"
+              action="{{ url_for('save_annotation') }}" method="post">
+          <input type="hidden" name="typename"   value="{{ prototype.typename }}">
+          <input type="hidden" name="proto_name" value="{{ prototype.name }}">
+          <input type="hidden" name="version_tag" value="{{ current_version_tag }}">
+          <textarea name="content" class="annot-textarea"
+                    placeholder="Votre note…" rows="4"></textarea>
+          <input type="text" name="tags" class="annot-tags-input"
+                 placeholder="tags séparés par virgules (ex: todo,bug)">
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        </form>
+      </section>
+    </aside>
+
+  </div>{# /detail-layout #}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  initPropFilter('prop-filter', 'props-table');
+  initSchemaToggle('toggle-schema');
+  initCopyButtons();
+</script>
+{% endblock %}
