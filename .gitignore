@@ -1,0 +1,21 @@
+# Configuration sensible (token GitHub)
+config/settings.toml
+
+# Base de données et cache (trop lourds, régénérables)
+data/
+
+# Environnement virtuel Python
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
