@@ -1,0 +1,26 @@
+# Factorio Modding Hub — dépendances Python
+# Installer avec : pip install -r requirements.txt
+
+# --- Web ---
+flask>=3.0,<4.0
+
+# --- Scraping ---
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.0            # Parser HTML rapide pour BeautifulSoup
+
+# --- Parsing Lua ---
+luaparser>=3.2       # AST Lua pure-Python (sous-ensemble Factorio)
+
+# --- Configuration TOML ---
+# tomllib est intégré en Python 3.11+
+# Pour Python 3.10 et inférieur :
+tomli>=2.0; python_version < "3.11"
+
+# --- Utilitaires ---
+click>=8.1           # Optionnel : alternative à argparse si migration future
+python-dotenv>=1.0   # Chargement .env
+
+# --- Dev / tests ---
+pytest>=8.0
+pytest-cov>=5.0
