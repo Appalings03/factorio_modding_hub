@@ -33,7 +33,7 @@ logger = logging.getLogger("factorio_hub.parsers.lua")
 # Tokenizer léger
 # ---------------------------------------------------------------------------
 
-_RE_COMMENT_LINE  = re.compile(r"--[^\[\n][^\n]*")
+_RE_COMMENT_LINE  = re.compile(r"--(?!\[)[^\n]*")
 _RE_COMMENT_BLOCK = re.compile(r"--\[\[.*?\]\]", re.DOTALL)
 _RE_NUMBER        = re.compile(r"^-?\d+(\.\d+)?([eE][+-]?\d+)?$")
 _RE_STRING_DQ     = re.compile(r'"((?:[^"\\]|\\.)*)"')
@@ -208,33 +208,35 @@ class LuaTableParser:
         return result_dict
 
     def _try_parse_key(self) -> str | int | None:
-        """
-        Essaie de lire une clé de table (ident ou [expr]).
-        Retourne la clé ou None si ce n'est pas une paire clé=valeur.
-        """
         self._skip_ws()
-        # Clé entre crochets : [42] ou ["string"]
+
+        # Clé entre crochets : ["signal-ampersand"] ou [42]
         if self.pos < len(self.source) and self.source[self.pos] == "[":
             saved = self.pos
             self.pos += 1
+            self._skip_ws()
             try:
                 key = self._parse_value()
                 self._skip_ws()
-                if self.source[self.pos] == "]":
-                    self.pos += 1
+                if (self.pos < len(self.source)
+                        and self.source[self.pos] == "]"):
+                    self.pos += 1          # consomme ']'
                     self._skip_ws()
-                    if self.pos < len(self.source) and self.source[self.pos] == "=":
-                        return str(key)
+                    if (self.pos < len(self.source)
+                            and self.source[self.pos] == "="
+                            and (self.pos + 1 >= len(self.source)
+                                or self.source[self.pos + 1] != "=")):
+                        return str(key)    # c'est bien une clé
             except Exception:
                 pass
-            self.pos = saved
+            self.pos = saved               # backtrack propre
             return None
 
         # Identifiant nu : name = ...
         start = self.pos
         while self.pos < len(self.source) and (
             self.source[self.pos].isalnum()
-            or self.source[self.pos] in "_"
+            or self.source[self.pos] == "_"
         ):
             self.pos += 1
 
@@ -244,15 +246,11 @@ class LuaTableParser:
         ident = self.source[start : self.pos]
         self._skip_ws()
 
-        # Vérifie que le prochain char est bien '='
         if self.pos < len(self.source) and self.source[self.pos] == "=":
-            # Mais pas '==' (comparaison)
-            if self.pos + 1 < len(self.source) and self.source[self.pos + 1] == "=":
-                self.pos = start
-                return None
-            return ident
+            if (self.pos + 1 >= len(self.source)
+                    or self.source[self.pos + 1] != "="):
+                return ident
 
-        # Pas une paire clé=valeur — backtrack
         self.pos = start
         return None
 
@@ -304,18 +302,67 @@ class LuaTableParser:
 
     def _parse_number(self) -> int | float:
         start = self.pos
+
+        # Signe optionnel
         if self.pos < len(self.source) and self.source[self.pos] == "-":
             self.pos += 1
-        while self.pos < len(self.source) and (
-            self.source[self.pos].isdigit()
-            or self.source[self.pos] in ".eE+-"
+
+        # Vérifier qu'il y a bien un chiffre après (sinon c'est une référence)
+        if self.pos >= len(self.source) or not (
+            self.source[self.pos].isdigit() or self.source[self.pos] == "."
         ):
+            self.pos = start
+            return self._parse_reference()
+
+        # Hexadécimal : 0x1F, 0xFF, etc.
+        if (self.source[self.pos] == "0"
+                and self.pos + 1 < len(self.source)
+                and self.source[self.pos + 1] in "xX"):
+            self.pos += 2
+            while self.pos < len(self.source) and (
+                self.source[self.pos] in "0123456789abcdefABCDEF_"
+            ):
+                self.pos += 1
+            token = self.source[start : self.pos]
+            try:
+                return int(token.replace("_", ""), 16)
+            except ValueError:
+                self.pos = start
+                return self._parse_reference()
+
+        # Partie entière
+        while self.pos < len(self.source) and self.source[self.pos].isdigit():
             self.pos += 1
+
+        # Partie décimale
+        if self.pos < len(self.source) and self.source[self.pos] == ".":
+            self.pos += 1
+            while self.pos < len(self.source) and self.source[self.pos].isdigit():
+                self.pos += 1
+
+        # Exposant scientifique : e+5, E-3
+        if self.pos < len(self.source) and self.source[self.pos] in "eE":
+            self.pos += 1
+            if self.pos < len(self.source) and self.source[self.pos] in "+-":
+                self.pos += 1
+            while self.pos < len(self.source) and self.source[self.pos].isdigit():
+                self.pos += 1
+
         token = self.source[start : self.pos]
+
+        if not token or token == "-":
+            self.pos = start
+            return self._parse_reference()
+
         try:
             return int(token)
         except ValueError:
-            return float(token)
+            try:
+                return float(token)
+            except ValueError:
+                logger.warning("Token numérique non parseable : %r", token)
+                self.pos = start
+                return self._parse_reference()
 
     def _parse_reference(self) -> str:
         """Parse un identifiant Lua (defines.x.y, variable, etc.)"""
