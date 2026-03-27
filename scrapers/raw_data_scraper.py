@@ -116,6 +116,15 @@ class RawDataScraper:
         Parse la table Lua Serpent en dict Python.
         Utilise lua_json_parser si disponible, sinon lève une erreur claire.
         """
+        from parsers.lua_json_parser import strip_comments
+        stripped = strip_comments(lua_table)
+        
+        # Chercher ce qu'il y a autour de pos 21257360 APRÈS strip
+        ctx_start = max(0, 21257300)
+        ctx_end   = min(len(stripped), 21257450)
+        print(f"[DEBUG] Taille après strip : {len(stripped)}")
+        print(f"[DEBUG] Source autour de 21257360 après strip:")
+        print(repr(stripped[ctx_start:ctx_end]))
         try:
             from parsers.lua_json_parser import parse_lua_string
         except ImportError as e:
@@ -126,6 +135,19 @@ class RawDataScraper:
 
         print("[raw_data] Parsing Lua... (peut prendre 1-3 minutes pour 20 MB)")
         try:
+            from parsers.lua_json_parser import LuaTableParser, strip_comments
+
+            source = strip_comments(lua_table)
+            parser = LuaTableParser()
+            parser.source = source.strip()
+            parser.pos = 0
+
+            # Trouver la position de "agricultural-tower" dans la source
+            target = '["agricultural-tower"]'
+            pos_target = source.find(target)
+            print(f"[DEBUG] '{target}' trouvé à pos {pos_target}")
+            print(f"[DEBUG] Contexte : {repr(source[pos_target-30:pos_target+60])}")
+
             data = parse_lua_string(lua_table)
         except SyntaxError as e:
             # Affiche le contexte autour de la position d'erreur

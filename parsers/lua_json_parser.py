@@ -43,11 +43,94 @@ _RE_IDENT         = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.]*$")
 
 
 def strip_comments(source: str) -> str:
-    """Retire les commentaires Lua (ligne et bloc)."""
-    source = _RE_COMMENT_BLOCK.sub("", source)
-    source = _RE_COMMENT_LINE.sub("", source)
-    return source
+    """
+    Retire les commentaires Lua sans toucher au contenu des strings.
+    Gère : --[=*[ ... ]=*] (blocs), -- ... (lignes)
+    Ne touche PAS aux -- à l'intérieur de strings "..." ou '...'
+    """
+    result = []
+    i = 0
+    n = len(source)
 
+    while i < n:
+        c = source[i]
+
+        # String double quote
+        if c == '"':
+            j = i + 1
+            while j < n:
+                if source[j] == '\\':
+                    j += 2
+                    continue
+                if source[j] == '"':
+                    j += 1
+                    break
+                j += 1
+            result.append(source[i:j])
+            i = j
+            continue
+
+        # String single quote
+        if c == "'":
+            j = i + 1
+            while j < n:
+                if source[j] == '\\':
+                    j += 2
+                    continue
+                if source[j] == "'":
+                    j += 1
+                    break
+                j += 1
+            result.append(source[i:j])
+            i = j
+            continue
+
+        # Long string [=*[
+        if c == '[':
+            level = 0
+            k = i + 1
+            while k < n and source[k] == '=':
+                level += 1
+                k += 1
+            if k < n and source[k] == '[':
+                # C'est une long string, pas un commentaire — on la garde
+                closing = ']' + '=' * level + ']'
+                end = source.find(closing, k + 1)
+                if end != -1:
+                    result.append(source[i:end + len(closing)])
+                    i = end + len(closing)
+                else:
+                    result.append(c)
+                    i += 1
+                continue
+
+        # Commentaire --
+        if c == '-' and i + 1 < n and source[i + 1] == '-':
+            # Commentaire bloc --[=*[
+            if i + 2 < n and source[i + 2] == '[':
+                level = 0
+                k = i + 3
+                while k < n and source[k] == '=':
+                    level += 1
+                    k += 1
+                if k < n and source[k] == '[':
+                    closing = ']' + '=' * level + ']'
+                    end = source.find(closing, k + 1)
+                    if end != -1:
+                        i = end + len(closing)
+                    else:
+                        i = n
+                    continue
+
+            # Commentaire ligne -- jusqu'à \n
+            while i < n and source[i] != '\n':
+                i += 1
+            continue
+
+        result.append(c)
+        i += 1
+
+    return ''.join(result)
 
 # ---------------------------------------------------------------------------
 # Extraction des blocs data:extend(...)
@@ -138,10 +221,14 @@ class LuaTableParser:
             return self._parse_string_dq()
         if c == "'":
             return self._parse_string_sq()
-        # ← CORRECTION : vérifier que c'est bien [[ et pas [42] ou [alert]
-        if (self.source.startswith("[[", self.pos)
-                and not self.source.startswith("[[[", self.pos)):
-            return self._parse_string_long()
+        # Détecter [[ et [=[ et [==[ etc.
+        if c == "[":
+            i = self.pos + 1
+            while i < len(self.source) and self.source[i] == "=":
+                i += 1
+            if i < len(self.source) and self.source[i] == "[":
+                return self._parse_string_long()
+            # Pas une long string — _parse_reference va skipper le [
         if self.source.startswith("true", self.pos) and not self._is_ident_char_at(self.pos + 4):
             self.pos += 4
             return True
@@ -177,6 +264,10 @@ class LuaTableParser:
             # Détecter si c'est une paire clé=valeur
             # Sauvegarde de position pour backtrack
             saved_pos = self.pos
+            # DEBUG TEMPORAIRE
+            if self.pos > 21257300:
+                print(f"[TRACE] pos={self.pos} char={self.source[self.pos]!r} ctx={self.source[self.pos:self.pos+40]!r}")
+
             key = self._try_parse_key()
 
             if key is not None:
@@ -227,10 +318,10 @@ class LuaTableParser:
                             and self.source[self.pos] == "="
                             and (self.pos + 1 >= len(self.source)
                                 or self.source[self.pos + 1] != "=")):
-                        return str(key)    # c'est bien une clé
+                        return str(key)    # succès — '=' sera consommé par _parse_table
             except Exception:
                 pass
-            self.pos = saved               # backtrack propre
+            self.pos = saved               # backtrack dans TOUS les cas d'échec
             return None
 
         # Identifiant nu : name = ...
