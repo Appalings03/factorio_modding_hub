@@ -363,42 +363,40 @@ class Repository:
     # ------------------------------------------------------------------ #
 
     def rebuild_properties_flat(self, version_id: int) -> None:
-        """
-        Extrait les propriétés scalaires de raw_json vers prototype_properties.
-        Aussi met à jour le champ properties_flat dans prototypes_fts.
-        Opération lourde — à appeler une seule fois après import.
-        """
         with self._conn() as con:
+            # Supprime les anciennes propriétés
+            con.execute(
+                """
+                DELETE FROM prototype_properties 
+                WHERE prototype_id IN (
+                    SELECT id FROM prototypes WHERE version_id = ?
+                )
+                """,
+                (version_id,),
+            )
+
+            # Récupère tous les prototypes
             rows = con.execute(
                 "SELECT id, raw_json FROM prototypes WHERE version_id = ?",
                 (version_id,),
             ).fetchall()
 
+            # Insère les propriétés en batch
+            props_batch = []
             for row in rows:
-                proto_id  = row["id"]
-                raw       = json.loads(row["raw_json"])
-                flat_kvs  = list(_flatten_json(raw))
+                raw      = json.loads(row["raw_json"])
+                flat_kvs = list(_flatten_json(raw))
+                for k, v in flat_kvs:
+                    props_batch.append((row["id"], k, str(v), _value_type(v)))
 
-                # Supprime les anciennes propriétés
-                con.execute(
-                    "DELETE FROM prototype_properties WHERE prototype_id = ?",
-                    (proto_id,),
-                )
-                # Réinsère
-                con.executemany(
-                    "INSERT INTO prototype_properties(prototype_id, key, value_text, value_type) "
-                    "VALUES (?, ?, ?, ?)",
-                    [
-                        (proto_id, k, str(v), _value_type(v))
-                        for k, v in flat_kvs
-                    ],
-                )
-                # Met à jour properties_flat dans FTS
-                flat_text = " ".join(f"{k}:{v}" for k, v in flat_kvs)
-                con.execute(
-                    "UPDATE prototypes_fts SET properties_flat = ? WHERE rowid = ?",
-                    (flat_text, proto_id),
-                )
+            con.executemany(
+                "INSERT INTO prototype_properties"
+                "(prototype_id, key, value_text, value_type) "
+                "VALUES (?, ?, ?, ?)",
+                props_batch,
+            )
+            # Le FTS est géré par les triggers proto_ai lors du upsert_prototype
+            # Pas besoin de le reconstruire ici
 
     def get_prototype_properties(self, prototype_id: int) -> list[dict]:
         with self._conn() as con:

@@ -65,7 +65,12 @@ class SyncManager:
                 print(f"[sync] {count} prototypes importés...")
 
         # Extraction des propriétés plates pour FTS et diff
-        self.repo.rebuild_properties_flat(version_id)
+        import traceback
+        try:
+            self.repo.rebuild_properties_flat(version_id)
+        except Exception as e:
+            traceback.print_exc()
+            raise
         # Extraction des relations (ingredients, results, etc.)
         self.repo.extract_relations(version_id)
 
