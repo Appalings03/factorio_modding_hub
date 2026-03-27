@@ -120,7 +120,7 @@ def print_header():
     print()
     print(_c("╔══════════════════════════════════════╗", CYAN))
     print(_c("║   Factorio Modding Hub               ║", CYAN))
-    print(_c("║   Centralisateur de prototypes        ║", CYAN))
+    print(_c("║   Centralisateur de prototypes       ║", CYAN))
     print(_c("╚══════════════════════════════════════╝", CYAN))
     print()
 
