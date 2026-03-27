@@ -56,6 +56,11 @@ class RawDataScraper:
         resp.raise_for_status()
 
         raw_bytes = resp.content
+        if not raw_bytes.strip().startswith(b'{'):
+            raise ValueError(
+                f"Le gist n'a pas retourné du JSON (reçu : {raw_bytes[:200]})\n"
+                "L'URL du gist a peut-être changé. Vérifiez wiki.factorio.com/Data.raw"
+            )
         checksum  = self._compute_hash(raw_bytes)
 
         # Vérification anti-re-import inutile

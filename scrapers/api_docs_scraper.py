@@ -66,9 +66,10 @@ class ApiDocsParser:
         data = resp.json()
 
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+        cache_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"[api_docs] Téléchargé : {url}")
         return data
+    
 
     def get_prototype_api(self) -> dict:
         return self._fetch_json(PROTOTYPE_API_URL, self.cache_proto)
