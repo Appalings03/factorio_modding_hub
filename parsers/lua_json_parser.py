@@ -138,7 +138,9 @@ class LuaTableParser:
             return self._parse_string_dq()
         if c == "'":
             return self._parse_string_sq()
-        if self.source.startswith("[[", self.pos):
+        # ← CORRECTION : vérifier que c'est bien [[ et pas [42] ou [alert]
+        if (self.source.startswith("[[", self.pos)
+                and not self.source.startswith("[[[", self.pos)):
             return self._parse_string_long()
         if self.source.startswith("true", self.pos) and not self._is_ident_char_at(self.pos + 4):
             self.pos += 4
@@ -152,7 +154,6 @@ class LuaTableParser:
         if c == "-" or c.isdigit():
             return self._parse_number()
 
-        # Référence (defines.xxx, variable, etc.) → on retourne comme string
         return self._parse_reference()
 
     def _is_ident_char_at(self, pos: int) -> bool:
@@ -291,13 +292,26 @@ class LuaTableParser:
         return "".join(result)
 
     def _parse_string_long(self) -> str:
-        """Parse [[...]] long strings."""
-        self.pos += 2  # skip [[
-        end = self.source.find("]]", self.pos)
+        """Parse [[...]] et [=[...]=] long strings (format Lua/Serpent)."""
+        # Compter le niveau : [[ = 0, [=[ = 1, [==[ = 2, etc.
+        level = 0
+        self.pos += 1  # skip '['
+        while self.pos < len(self.source) and self.source[self.pos] == "=":
+            level += 1
+            self.pos += 1
+        if self.pos < len(self.source) and self.source[self.pos] == "[":
+            self.pos += 1  # skip second '['
+        else:
+            # Pas une long string valide — backtrack impossible ici,
+            # retourner string vide
+            return ""
+
+        closing = "]" + "=" * level + "]"
+        end = self.source.find(closing, self.pos)
         if end == -1:
-            raise SyntaxError("Long string non fermée")
+            raise SyntaxError(f"Long string niveau {level} non fermée")
         result = self.source[self.pos : end]
-        self.pos = end + 2
+        self.pos = end + len(closing)
         return result
 
     def _parse_number(self) -> int | float:
