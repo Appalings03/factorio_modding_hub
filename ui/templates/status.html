@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}État DB — FMH{% endblock %}
+
+{% block content %}
+<div class="page-status">
+  <h1 class="page-title">État de la base de données</h1>
+
+  {% if not info.exists %}
+    <div class="flash flash-error">
+      Base de données introuvable — lancez <code>py main.py sync</code> d'abord.
+    </div>
+  {% else %}
+
+    <section class="detail-section">
+      <h2 class="section-title">Versions synchronisées</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Version</th>
+            <th>Sources</th>
+            <th>Date</th>
+            <th>Latest</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in info.versions %}
+          <tr>
+            <td><code>{{ v[0] }}</code></td>
+            <td><code>{{ v[1] }}</code></td>
+            <td class="muted">{{ v[2][:19] }}</td>
+            <td>{% if v[3] %}<span class="badge-added">★</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="detail-section">
+      <h2 class="section-title">Compteurs</h2>
+      <table>
+        <thead><tr><th>Table</th><th>Lignes</th></tr></thead>
+        <tbody>
+          {% for table, count in info.counts.items() %}
+          <tr>
+            <td><code>{{ table }}</code></td>
+            <td>{{ count if count is not none else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="detail-section">
+      <h2 class="section-title">Migrations appliquées</h2>
+      <ul style="list-style:none; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        {% for m in info.migrations %}
+          <li><code class="type-badge">{{ m }}</code></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+  {% endif %}
+</div>
+{% endblock %}

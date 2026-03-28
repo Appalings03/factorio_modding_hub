@@ -92,11 +92,42 @@
         {% endif %}
 
       {% else %}
-        <div class="empty-state">
-          <p>Aucun prototype trouvé{% if query %} pour <em>« {{ query }} »</em>{% endif %}.</p>
-          <p class="muted">Conseil : utilisez <code>*</code> pour une recherche par préfixe (ex: <code>iron*</code>)</p>
+  {# Page d'accueil — grille enrichie par catégorie #}
+  <div class="type-grid" id="types">
+
+    {% if type_cards %}
+      {% for group in type_cards %}
+      <section class="type-category">
+        <h2 class="type-category-title">{{ group.category }}</h2>
+        <div class="type-cards">
+          {% for card in group.cards %}
+          <a href="{{ url_for('search_page', typename=card.typename, v=version_id) }}"
+             class="type-card-rich">
+            <div class="type-card-header">
+              <span class="type-card-name">{{ card.typename }}</span>
+              {% if card.count %}
+                <span class="type-card-count">{{ card.count }}</span>
+              {% endif %}
+            </div>
+            {% if card.description %}
+              <p class="type-card-desc">{{ card.description }}</p>
+            {% endif %}
+          </a>
+          {% endfor %}
         </div>
-      {% endif %}
+      </section>
+      {% endfor %}
+    {% else %}
+      {# Fallback simple si pas de données #}
+      <div class="type-cards">
+        {% for tn in typenames %}
+          <a href="{{ url_for('search_page', typename=tn, v=version_id) }}"
+             class="type-card">{{ tn }}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
     </section>
   {% else %}
     {# Première visite — affiche les types disponibles #}
