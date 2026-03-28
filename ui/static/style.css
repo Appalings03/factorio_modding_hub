@@ -709,3 +709,70 @@ tr:hover td { background: var(--bg-panel); }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+/* ============================================================
+   PAGE D'ACCUEIL — Type cards enrichies
+   ============================================================ */
+.type-category {
+  margin-bottom: 2rem;
+}
+.type-category-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--accent-dim);
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+.type-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.type-card-rich {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  min-width: 160px;
+  max-width: 260px;
+  flex: 1 1 160px;
+  transition: border-color 0.15s, background 0.15s;
+  text-decoration: none;
+}
+.type-card-rich:hover {
+  border-color: var(--accent-dim);
+  background: var(--accent-glow);
+  text-decoration: none;
+}
+.type-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.type-card-name {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.type-card-rich:hover .type-card-name {
+  color: var(--accent);
+}
+.type-card-count {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.type-card-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+  line-height: 1.4;
+}

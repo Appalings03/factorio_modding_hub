@@ -92,11 +92,13 @@ def create_app(config: dict) -> Flask:
                 typenames=typenames,
             )
         else:
-            # Page d'accueil : grille des types
+            # Page d'accueil — grille enrichie
+            type_cards = _build_type_cards(repo, version_id, typenames)
             return render_template(
                 "search.html",
                 query="",
                 typenames=typenames,
+                type_cards=type_cards,
                 current_typename=None,
             )
 
@@ -257,6 +259,121 @@ def create_app(config: dict) -> Flask:
 # ------------------------------------------------------------------ #
 # Helpers                                                              #
 # ------------------------------------------------------------------ #
+
+# Catégories et ordre logique pour la page d'accueil
+_TYPE_CATEGORIES = {
+    "Items & Fluides": [
+        "item", "fluid", "capsule", "ammo", "armor", "gun", "tool",
+        "item-with-entity-data", "selection-tool", "copy-paste-tool",
+        "deconstruction-item", "upgrade-item", "blueprint", "blueprint-book",
+        "item-group", "item-subgroup", "fuel-category",
+    ],
+    "Recettes & Crafting": [
+        "recipe", "recipe-category", "module", "module-category",
+    ],
+    "Entités": [
+        "assembling-machine", "furnace", "mining-drill", "boiler", "generator",
+        "electric-pole", "transport-belt", "inserter", "container",
+        "logistic-container", "storage-tank", "pipe", "pump", "offshore-pump",
+        "reactor", "heat-pipe", "accumulator", "solar-panel", "beacon",
+        "lab", "radar", "roboport", "gate", "wall", "turret",
+        "ammo-turret", "electric-turret", "fluid-turret", "artillery-turret",
+        "car", "locomotive", "cargo-wagon", "fluid-wagon", "artillery-wagon",
+        "spider-vehicle", "character", "combat-robot", "construction-robot",
+        "logistic-robot", "land-mine", "cliff", "fish", "tree",
+        "simple-entity", "resource", "market", "lamp",
+    ],
+    "Technologie": [
+        "technology", "tool",
+    ],
+    "Signaux & Combinateurs": [
+        "virtual-signal", "constant-combinator", "arithmetic-combinator",
+        "decider-combinator", "display-panel",
+    ],
+    "Équipement": [
+        "equipment-grid", "equipment-category", "battery-equipment",
+        "active-defense-equipment", "belt-immunity-equipment",
+        "energy-shield-equipment", "generator-equipment",
+        "inventory-bonus-equipment", "movement-bonus-equipment",
+        "night-vision-equipment", "roboport-equipment",
+    ],
+    "Achievements": [
+        "achievement", "build-entity-achievement", "combat-robot-count-achievement",
+        "construct-with-robots-achievement", "deconstruct-with-robots-achievement",
+        "deliver-by-robots-achievement", "dont-build-entity-achievement",
+        "dont-craft-manually-achievement", "dont-kill-manually-achievement",
+        "kill-achievement", "research-achievement", "produce-achievement",
+        "produce-per-hour-achievement", "train-path-achievement",
+    ],
+    "Sons & Visuels": [
+        "ambient-sound", "font", "gui-style", "mouse-cursor",
+        "noise-expression", "noise-function", "optimized-decorative",
+        "optimized-particle", "particle-source", "tile", "tile-effect",
+    ],
+    "Autres": [],  # catch-all
+}
+
+
+def _build_type_cards(repo, version_id: int | None, typenames: list[str]) -> list[dict]:
+    """
+    Construit la liste enrichie des types pour la page d'accueil.
+    Chaque entrée : {typename, count, description, category}
+    """
+    if not version_id:
+        return [{"typename": t, "count": 0, "description": "", "category": "Autres"}
+                for t in typenames]
+
+    # Comptage par typename
+    with repo._conn() as con:
+        rows = con.execute(
+            "SELECT typename, COUNT(*) as cnt FROM prototypes "
+            "WHERE version_id = ? GROUP BY typename",
+            (version_id,),
+        ).fetchall()
+    counts = {r["typename"]: r["cnt"] for r in rows}
+
+    # Descriptions depuis prototype_types
+    with repo._conn() as con:
+        rows = con.execute(
+            "SELECT typename, description FROM prototype_types "
+            "WHERE version_id = ? AND typename IS NOT NULL",
+            (version_id,),
+        ).fetchall()
+    descriptions = {r["typename"]: r["description"] for r in rows}
+
+    # Assignation des catégories
+    assigned = {}
+    for category, types in _TYPE_CATEGORIES.items():
+        if category == "Autres":
+            continue
+        for t in types:
+            assigned[t] = category
+
+    # Construction des cards groupées
+    groups = {cat: [] for cat in _TYPE_CATEGORIES}
+    for typename in typenames:
+        category = assigned.get(typename, "Autres")
+        desc = descriptions.get(typename, "")
+        # Tronque la description
+        if desc and len(desc) > 80:
+            desc = desc[:77] + "..."
+        groups[category].append({
+            "typename":    typename,
+            "count":       counts.get(typename, 0),
+            "description": desc,
+            "category":    category,
+        })
+
+    # Retourne dans l'ordre des catégories
+    result = []
+    for category, cards in groups.items():
+        if cards:
+            result.append({
+                "category": category,
+                "cards":    sorted(cards, key=lambda c: c["typename"]),
+            })
+
+    return result
 
 def _get_version_id(req, repo: Repository, versions: list) -> int | None:
     """
