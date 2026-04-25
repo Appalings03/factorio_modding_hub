@@ -210,7 +210,9 @@ def _apply_file_migrations(db_path: Path) -> None:
     if not MIGRATIONS_DIR.exists():
         return
 
-    sql_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    sql_files = sorted(
+        path for path in MIGRATIONS_DIR.glob("*.sql") if path.is_file()
+    )
     if not sql_files:
         return
 

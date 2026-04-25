@@ -110,6 +110,18 @@ RED    = "\033[91m"
 BOLD   = "\033[1m"
 RESET  = "\033[0m"
 
+def configure_output_streams():
+    """Evite les plantages d'affichage sur consoles non UTF-8."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(errors="replace")
+        except Exception:
+            pass
+
 def _c(text: str, color: str) -> str:
     """Colorise le texte si stdout est un terminal."""
     if sys.stdout.isatty():
@@ -513,6 +525,7 @@ Exemples :
 # Point d'entrée
 # ---------------------------------------------------------------------------
 def main():
+    configure_output_streams()
     print_header()
     config = load_config()
     parser = build_parser()
