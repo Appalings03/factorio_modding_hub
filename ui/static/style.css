@@ -137,6 +137,30 @@ code, pre {
   outline: none;
   transition: border-color 0.15s;
 }
+.lang-selector {
+  display: flex;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+ 
+.lang-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.lang-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+.lang-btn-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
 .header-search input:focus { border-color: var(--accent); }
 
 /* ============================================================

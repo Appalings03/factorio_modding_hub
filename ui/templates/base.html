@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ get_lang() }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,17 +17,34 @@
       <nav class="header-nav">
         <a href="{{ url_for('search_page') }}"
            class="nav-link {% if request.endpoint == 'search_page' %}active{% endif %}">
-          Recherche
+          {{ t('nav.search') }}
         </a>
-        <a href="{{ url_for('index') }}#types"
-           class="nav-link">Types</a>
+        <a href="{{ url_for('index') }}#types" class="nav-link">
+          {{ t('nav.types') }}
+        </a>
         <a href="{{ url_for('status_page') }}"
            class="nav-link {% if request.endpoint == 'status_page' %}active{% endif %}">
-          État DB
+          {{ t('nav.status') }}
         </a>
       </nav>
+
+      {# Sélecteur de langue #}
+      <div class="lang-selector">
+        {% for lang in available_langs() %}
+          <form action="{{ url_for('set_language_route') }}" method="post" style="display:inline">
+            <input type="hidden" name="lang" value="{{ lang.code }}">
+            <button type="submit"
+                    class="lang-btn {% if lang.code == get_lang() %}lang-btn-active{% endif %}"
+                    title="{{ lang.native_name }}">
+              {{ lang.flag }} {{ lang.code.upper() }}
+            </button>
+          </form>
+        {% endfor %}
+      </div>
+
       <form class="header-search" action="{{ url_for('search_page') }}" method="get">
-        <input type="text" name="q" placeholder="Rechercher un prototype…"
+        <input type="text" name="q"
+               placeholder="{{ t('nav.search_placeholder') }}"
                value="{{ request.args.get('q', '') }}"
                autocomplete="off" id="header-search-input">
         {% if version_id %}<input type="hidden" name="v" value="{{ version_id }}">{% endif %}
@@ -50,7 +67,7 @@
     {% if db_version %}
       <span class="footer-version">DB : {{ db_version }}</span>
     {% endif %}
-    <span class="footer-note">Usage local uniquement</span>
+    <span class="footer-note">{{ t('footer.local_only') }}</span>
   </footer>
 
   <script src="{{ url_for('static', filename='app.js') }}"></script>

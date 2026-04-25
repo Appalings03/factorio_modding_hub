@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Comparaison — {{ typename }}/{{ name }} — FMH{% endblock %}
+{% block title %}{{ t('compare.title') }}{% endblock %}
 
 {% block content %}
 <div class="page-compare">
 
   <nav class="breadcrumb">
-    <a href="{{ url_for('search_page') }}">Recherche</a>
+    <a href="{{ url_for('search_page') }}">{{ t('nav.search') }}</a>
     <span class="bc-sep">›</span>
     {% if typename %}
       <a href="{{ url_for('search_page', typename=typename) }}">{{ typename }}</a>
@@ -17,60 +17,62 @@
       {% endif %}
       <span class="bc-sep">›</span>
     {% endif %}
-    <span>Comparaison</span>
+    <span>{{ t('compare.page_title') }}</span>
   </nav>
 
   <h1 class="page-title">
-    Comparaison de version
+    {{ t('compare.page_title') }}
     {% if name %}<span class="muted">— {{ typename }}/{{ name }}</span>{% endif %}
   </h1>
 
-  {# ── Formulaire de sélection ── #}
   <form class="compare-form" action="{{ url_for('compare_page') }}" method="get">
     <div class="compare-selectors">
 
       <div class="compare-col">
-        <label class="form-label">Type de prototype</label>
+        <label class="form-label">Type</label>
         <select name="typename" class="filter-select">
-          <option value="">— Choisir un type —</option>
+          <option value="">{{ t('compare.choose_type') }}</option>
           {% for tn in typenames %}
             <option value="{{ tn }}" {% if tn == typename %}selected{% endif %}>{{ tn }}</option>
           {% endfor %}
         </select>
         <input type="text" name="name" class="filter-input"
-               placeholder="Nom du prototype (ex: iron-plate)"
+               placeholder="{{ t('compare.proto_placeholder') }}"
                value="{{ name or '' }}">
       </div>
 
       <div class="compare-col">
-        <label class="form-label">Version A <span class="muted">(référence)</span></label>
+        <label class="form-label">
+          {{ t('compare.version_a') }} <span class="muted">{{ t('compare.version_a_hint') }}</span>
+        </label>
         <select name="va" class="filter-select">
-          {% for v in versions %}
-            <option value="{{ v.version_tag }}"
-                    {% if v.version_tag == version_a %}selected{% endif %}>
-              {{ v.version_tag }}
+          {% for ver in versions %}
+            <option value="{{ ver.version_tag }}"
+                    {% if ver.version_tag == version_a %}selected{% endif %}>
+              {{ ver.version_tag }}
             </option>
           {% endfor %}
         </select>
       </div>
 
       <div class="compare-col">
-        <label class="form-label">Version B <span class="muted">(cible)</span></label>
+        <label class="form-label">
+          {{ t('compare.version_b') }} <span class="muted">{{ t('compare.version_b_hint') }}</span>
+        </label>
         <select name="vb" class="filter-select">
-          {% for v in versions %}
-            <option value="{{ v.version_tag }}"
-                    {% if v.version_tag == version_b %}selected{% endif %}>
-              {{ v.version_tag }}{% if v.is_latest %} ★{% endif %}
+          {% for ver in versions %}
+            <option value="{{ ver.version_tag }}"
+                    {% if ver.version_tag == version_b %}selected{% endif %}>
+              {{ ver.version_tag }}{% if ver.is_latest %} ★{% endif %}
             </option>
           {% endfor %}
         </select>
       </div>
 
-      <button type="submit" class="btn btn-primary">Comparer</button>
+      <button type="submit" class="btn btn-primary">{{ t('compare.btn_compare') }}</button>
     </div>
   </form>
 
-  {# ── Résultats du diff ── #}
   {% if diff %}
   <div class="diff-result">
 
@@ -84,47 +86,51 @@
 
     {% if not diff.exists_in_a %}
       <div class="diff-notice diff-notice-added">
-        ✦ Ce prototype est apparu dans la version {{ diff.version_b }}.
+        ✦ {{ t('compare.new_in') }} {{ diff.version_b }}.
       </div>
-
     {% elif not diff.exists_in_b %}
       <div class="diff-notice diff-notice-removed">
-        ✕ Ce prototype a été supprimé dans la version {{ diff.version_b }}.
+        ✕ {{ t('compare.removed_in') }} {{ diff.version_b }}.
       </div>
-
     {% elif not diff.has_changes %}
       <div class="diff-notice diff-notice-unchanged">
-        ✓ Aucun changement détecté entre ces deux versions.
+        ✓ {{ t('compare.no_changes') }}
       </div>
-
     {% else %}
 
-      {# Compteurs / filtres d'affichage #}
       <div class="diff-filters">
         <label class="toggle-label">
           <input type="checkbox" class="diff-toggle" data-group="diff-added" checked>
-          <span class="badge-added">+ {{ diff.added | length }} ajouté{% if diff.added | length > 1 %}s{% endif %}</span>
+          <span class="badge-added">
+            + {{ diff.added | length }}
+            {{ t('compare.added_many') if diff.added | length > 1 else t('compare.added_one') }}
+          </span>
         </label>
         <label class="toggle-label">
           <input type="checkbox" class="diff-toggle" data-group="diff-removed" checked>
-          <span class="badge-removed">− {{ diff.removed | length }} supprimé{% if diff.removed | length > 1 %}s{% endif %}</span>
+          <span class="badge-removed">
+            − {{ diff.removed | length }}
+            {{ t('compare.removed_many') if diff.removed | length > 1 else t('compare.removed_one') }}
+          </span>
         </label>
         <label class="toggle-label">
           <input type="checkbox" class="diff-toggle" data-group="diff-modified" checked>
-          <span class="badge-modified">~ {{ diff.modified | length }} modifié{% if diff.modified | length > 1 %}s{% endif %}</span>
+          <span class="badge-modified">
+            ~ {{ diff.modified | length }}
+            {{ t('compare.modified_many') if diff.modified | length > 1 else t('compare.modified_one') }}
+          </span>
         </label>
       </div>
 
       <table class="diff-table">
         <thead>
           <tr>
-            <th class="diff-th-key">Propriété</th>
+            <th class="diff-th-key">{{ t('compare.col_property') }}</th>
             <th class="diff-th-val">{{ diff.version_a }}</th>
             <th class="diff-th-val">{{ diff.version_b }}</th>
           </tr>
         </thead>
         <tbody>
-
           {% for change in diff.added %}
           <tr class="diff-row diff-added">
             <td class="diff-key"><code>{{ change.key }}</code></td>
@@ -132,7 +138,6 @@
             <td class="diff-cell diff-cell-new">{{ change.to }}</td>
           </tr>
           {% endfor %}
-
           {% for change in diff.removed %}
           <tr class="diff-row diff-removed">
             <td class="diff-key"><code>{{ change.key }}</code></td>
@@ -140,7 +145,6 @@
             <td class="diff-cell diff-cell-empty">—</td>
           </tr>
           {% endfor %}
-
           {% for change in diff.modified %}
           <tr class="diff-row diff-modified">
             <td class="diff-key"><code>{{ change.key }}</code></td>
@@ -148,19 +152,16 @@
             <td class="diff-cell diff-cell-new">{{ change.to }}</td>
           </tr>
           {% endfor %}
-
         </tbody>
       </table>
 
     {% endif %}
-  </div>{# /diff-result #}
+  </div>
   {% endif %}
 
-</div>{# /page-compare #}
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-  initDiffToggles();
-</script>
+<script>initDiffToggles();</script>
 {% endblock %}

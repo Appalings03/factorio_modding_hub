@@ -1,34 +1,34 @@
 {% extends "base.html" %}
-{% block title %}État DB — FMH{% endblock %}
+{% block title %}{{ t('status.title') }}{% endblock %}
 
 {% block content %}
 <div class="page-status">
-  <h1 class="page-title">État de la base de données</h1>
+  <h1 class="page-title">{{ t('status.page_title') }}</h1>
 
   {% if not info.exists %}
     <div class="flash flash-error">
-      Base de données introuvable — lancez <code>py main.py sync</code> d'abord.
+      {{ t('status.not_initialized') }} — {{ t('status.run_sync') }}
     </div>
   {% else %}
 
     <section class="detail-section">
-      <h2 class="section-title">Versions synchronisées</h2>
+      <h2 class="section-title">{{ t('status.col_version') }}s</h2>
       <table>
         <thead>
           <tr>
-            <th>Version</th>
-            <th>Sources</th>
-            <th>Date</th>
-            <th>Latest</th>
+            <th>{{ t('status.col_version') }}</th>
+            <th>{{ t('status.col_sources') }}</th>
+            <th>{{ t('status.col_date') }}</th>
+            <th>{{ t('status.col_latest') }}</th>
           </tr>
         </thead>
         <tbody>
-          {% for v in info.versions %}
+          {% for ver in info.versions %}
           <tr>
-            <td><code>{{ v[0] }}</code></td>
-            <td><code>{{ v[1] }}</code></td>
-            <td class="muted">{{ v[2][:19] }}</td>
-            <td>{% if v[3] %}<span class="badge-added">★</span>{% endif %}</td>
+            <td><code>{{ ver[0] }}</code></td>
+            <td><code>{{ ver[1] }}</code></td>
+            <td class="muted">{{ ver[2][:19] }}</td>
+            <td>{% if ver[3] %}<span class="badge-added">★</span>{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -51,7 +51,7 @@
     </section>
 
     <section class="detail-section">
-      <h2 class="section-title">Migrations appliquées</h2>
+      <h2 class="section-title">Migrations</h2>
       <ul style="list-style:none; display:flex; gap:0.5rem; flex-wrap:wrap;">
         {% for m in info.migrations %}
           <li><code class="type-badge">{{ m }}</code></li>

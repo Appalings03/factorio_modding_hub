@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Factorio Modding Hub — Accueil{% endblock %}
+{% block title %}Factorio Modding Hub{% endblock %}
 
 {% block content %}
 <div class="page-home">
@@ -8,16 +8,16 @@
   <section class="home-hero">
     <div class="hero-text">
       <h1 class="hero-title">
-        <span class="hero-bracket">[</span>FMH<span class="hero-bracket">]</span>
+        <span class="logo-bracket">[</span>FMH<span class="logo-bracket">]</span>
       </h1>
       <br>
-      <p class="hero-sub">Centralisateur local de prototypes Factorio pour moddeurs.</p>
+      <p class="hero-sub">{{ t('home.subtitle') }}</p>
     </div>
 
     <form class="hero-search-form" action="{{ url_for('search_page') }}" method="get">
       <div class="hero-search-wrap">
         <input type="text" name="q" id="hero-search-input"
-               placeholder="Chercher un prototype… ex: assembling-machine-1"
+               placeholder="{{ t('home.search_placeholder') }}"
                autocomplete="off" class="hero-search-input">
         {% if version_id %}<input type="hidden" name="v" value="{{ version_id }}">{% endif %}
         <button type="submit" class="hero-search-btn">→</button>
@@ -27,19 +27,17 @@
     {# Sélecteur de version #}
     {% if versions %}
     <div class="hero-version-bar">
-      <span class="hero-version-label">Version active :</span>
+      <span class="hero-version-label">{{ t('home.version_active') }}</span>
       <form class="hero-version-form" action="{{ url_for('set_default_version') }}" method="post">
         <select name="version_id" class="hero-version-select" onchange="this.form.submit()">
           {% for ver in versions %}
-            <option value="{{ ver.id }}"
-                    {% if ver.id == version_id %}selected{% endif %}>
-              {{ ver.version_tag }}
-              {% if ver.is_latest %}★{% endif %}
+            <option value="{{ ver.id }}" {% if ver.id == version_id %}selected{% endif %}>
+              {{ ver.version_tag }}{% if ver.is_latest %} ★{% endif %}
               — {{ ver.sources_synced | replace('["','') | replace('"]','') | replace('","',' + ') }}
             </option>
           {% endfor %}
         </select>
-        <noscript><button type="submit" class="btn btn-secondary btn-sm">Appliquer</button></noscript>
+        <noscript><button type="submit" class="btn btn-secondary btn-sm">OK</button></noscript>
       </form>
     </div>
     {% endif %}
@@ -49,15 +47,15 @@
     <div class="hero-stats">
       <div class="stat-pill">
         <span class="stat-num">{{ stats.proto_count }}</span>
-        <span class="stat-label">prototypes</span>
+        <span class="stat-label">{{ t('stats.prototypes') }}</span>
       </div>
       <div class="stat-pill">
         <span class="stat-num">{{ stats.type_count }}</span>
-        <span class="stat-label">types</span>
+        <span class="stat-label">{{ t('stats.types') }}</span>
       </div>
       <div class="stat-pill">
         <span class="stat-num">{{ stats.version_tag }}</span>
-        <span class="stat-label">version active</span>
+        <span class="stat-label">{{ t('stats.version_active') }}</span>
       </div>
     </div>
     {% endif %}
@@ -66,8 +64,7 @@
   {# ── Grille des catégories ── #}
   {% if type_groups %}
   <section class="home-categories" id="types">
-    <h2 class="section-title">Types de prototypes</h2>
-
+    <h2 class="section-title">{{ t('home.types_title') }}</h2>
     {% for group in type_groups %}
     <div class="type-group">
       <div class="type-group-header">
@@ -75,30 +72,26 @@
         <h3 class="type-group-name">{{ group.category }}</h3>
         <span class="type-group-count muted">{{ group.cards | length }} types</span>
       </div>
-
       <div class="type-group-cards">
         {% for card in group.cards %}
         <a href="{{ url_for('search_page', typename=card.typename, v=version_id) }}"
            class="type-group-card">
           <div class="tgc-top">
             <code class="tgc-name">{{ card.typename }}</code>
-            {% if card.count %}
-            <span class="tgc-count">{{ card.count }}</span>
-            {% endif %}
+            {% if card.count %}<span class="tgc-count">{{ card.count }}</span>{% endif %}
           </div>
-          {% if card.description %}
-          <p class="tgc-desc">{{ card.description }}</p>
-          {% endif %}
+          {% if card.description %}<p class="tgc-desc">{{ card.description }}</p>{% endif %}
         </a>
         {% endfor %}
       </div>
     </div>
     {% endfor %}
   </section>
+
   {% else %}
   <div class="empty-state">
-    <p>Aucune donnée synchronisée.</p>
-    <p class="muted">Lancez <code>python main.py sync</code> pour importer les prototypes.</p>
+    <p>{{ t('home.no_data') }}</p>
+    <p class="muted">{{ t('home.no_data_hint') }}</p>
   </div>
   {% endif %}
 
@@ -106,15 +99,15 @@
   <section class="home-links">
     <a href="{{ url_for('search_page') }}" class="quicklink">
       <span class="ql-icon">⌕</span>
-      <span class="ql-label">Recherche avancée</span>
+      <span class="ql-label">{{ t('home.quicklink_search') }}</span>
     </a>
     <a href="{{ url_for('compare_page') }}" class="quicklink">
       <span class="ql-icon">⇄</span>
-      <span class="ql-label">Comparer versions</span>
+      <span class="ql-label">{{ t('home.quicklink_compare') }}</span>
     </a>
     <a href="{{ url_for('status_page') }}" class="quicklink">
       <span class="ql-icon">◈</span>
-      <span class="ql-label">État de la base</span>
+      <span class="ql-label">{{ t('home.quicklink_status') }}</span>
     </a>
   </section>
 
@@ -122,7 +115,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-  initAutocomplete('hero-search-input', '/api/autocomplete');
-</script>
+<script>initAutocomplete('hero-search-input', '/api/autocomplete');</script>
 {% endblock %}

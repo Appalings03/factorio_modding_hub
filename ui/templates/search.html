@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Recherche — Factorio Modding Hub{% endblock %}
+{% block title %}{{ t('search.title') }}{% endblock %}
 
 {% block content %}
 <div class="page-search">
@@ -7,29 +7,24 @@
   <section class="search-bar-section">
     <form class="search-form" action="{{ url_for('search_page') }}" method="get">
       <input type="text" name="q" class="search-input-main" autofocus
-             placeholder="Nom de prototype, propriété, type…"
+             placeholder="{{ t('search.placeholder') }}"
              value="{{ query or '' }}"
              autocomplete="off" id="main-search-input">
-
       <div class="search-filters">
         <select name="typename" class="filter-select">
-          <option value="">Tous les types</option>
+          <option value="">{{ t('search.all_types') }}</option>
           {% for tn in typenames %}
-            <option value="{{ tn }}" {% if tn == current_typename %}selected{% endif %}>
-              {{ tn }}
-            </option>
+            <option value="{{ tn }}" {% if tn == current_typename %}selected{% endif %}>{{ tn }}</option>
           {% endfor %}
         </select>
-
         <select name="v" class="filter-select">
-          {% for v in versions %}
-            <option value="{{ v.id }}" {% if v.id == version_id %}selected{% endif %}>
-              {{ v.version_tag }}{% if v.is_latest %} ★{% endif %}
+          {% for ver in versions %}
+            <option value="{{ ver.id }}" {% if ver.id == version_id %}selected{% endif %}>
+              {{ ver.version_tag }}{% if ver.is_latest %} ★{% endif %}
             </option>
           {% endfor %}
         </select>
-
-        <button type="submit" class="btn btn-primary">Rechercher</button>
+        <button type="submit" class="btn btn-primary">{{ t('search.btn_search') }}</button>
       </div>
     </form>
   </section>
@@ -39,12 +34,14 @@
       <div class="results-header">
         {% if query %}
           <span class="results-count">
-            <strong>{{ total }}</strong> résultat{% if total > 1 %}s{% endif %}
-            pour <em>« {{ query }} »</em>
+            <strong>{{ total }}</strong>
+            {{ t('search.results_count_many') if total > 1 else t('search.results_count_one') }}
+            <em>« {{ query }} »</em>
           </span>
         {% else %}
           <span class="results-count">
-            <strong>{{ total }}</strong> prototype{% if total > 1 %}s{% endif %}
+            <strong>{{ total }}</strong>
+            {{ t('search.prototypes_count_many') if total > 1 else t('search.prototypes_count_one') }}
           </span>
         {% endif %}
       </div>
@@ -53,10 +50,10 @@
         <table class="results-table">
           <thead>
             <tr>
-              <th>Nom</th>
-              <th>Type</th>
-              <th>Nom localisé</th>
-              <th>Subgroup</th>
+              <th>{{ t('search.col_name') }}</th>
+              <th>{{ t('search.col_type') }}</th>
+              <th>{{ t('search.col_localised') }}</th>
+              <th>{{ t('search.col_subgroup') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -81,32 +78,29 @@
         <nav class="pagination">
           {% if page > 1 %}
             <a href="{{ url_for('search_page', q=query, typename=current_typename, v=version_id, page=page-1) }}"
-               class="page-btn">← Précédent</a>
+               class="page-btn">{{ t('search.prev') }}</a>
           {% endif %}
-          <span class="page-info">Page {{ page }} / {{ pages }}</span>
+          <span class="page-info">{{ t('search.page_of', page=page, pages=pages) }}</span>
           {% if page < pages %}
             <a href="{{ url_for('search_page', q=query, typename=current_typename, v=version_id, page=page+1) }}"
-               class="page-btn">Suivant →</a>
+               class="page-btn">{{ t('search.next') }}</a>
           {% endif %}
         </nav>
         {% endif %}
 
       {% else %}
         <div class="empty-state">
-          <p>Aucun prototype trouvé{% if query %} pour <em>« {{ query }} »</em>{% endif %}.</p>
-          <p class="muted">Conseil : utilisez <code>*</code> pour une recherche par préfixe (ex: <code>iron*</code>)</p>
+          <p>{{ t('search.no_results') }}{% if query %} pour <em>« {{ query }} »</em>{% endif %}.</p>
+          <p class="muted">{{ t('search.no_results_hint') }}</p>
         </div>
       {% endif %}
     </section>
 
   {% else %}
-    {# ── Grille des types — organisée par catégorie ── #}
     <section class="type-browser" id="types">
       <h2 class="section-title">
-        Types de prototypes disponibles
-        <span class="muted" style="font-size:0.8rem;font-weight:normal;">
-          — {{ typenames | length }} types
-        </span>
+        {{ t('search.types_available') }}
+        <span class="muted" style="font-size:0.8rem;font-weight:normal;">— {{ typenames | length }} types</span>
       </h2>
 
       {% if type_cards %}
@@ -115,29 +109,21 @@
           <h3 class="tb-group-title">{{ group.category }}</h3>
           <div class="tb-cards">
             {% for card in group.cards %}
-            <a href="{{ url_for('search_page', typename=card.typename, v=version_id) }}"
-               class="tb-card">
+            <a href="{{ url_for('search_page', typename=card.typename, v=version_id) }}" class="tb-card">
               <div class="tb-card-top">
                 <code class="tb-card-name">{{ card.typename }}</code>
-                {% if card.count %}
-                <span class="tb-card-count">{{ card.count }}</span>
-                {% endif %}
+                {% if card.count %}<span class="tb-card-count">{{ card.count }}</span>{% endif %}
               </div>
-              {% if card.description %}
-              <p class="tb-card-desc">{{ card.description }}</p>
-              {% endif %}
+              {% if card.description %}<p class="tb-card-desc">{{ card.description }}</p>{% endif %}
             </a>
             {% endfor %}
           </div>
         </div>
         {% endfor %}
-
       {% else %}
-        {# Fallback : liste plate si pas de type_cards #}
         <div class="type-cards">
           {% for tn in typenames %}
-            <a href="{{ url_for('search_page', typename=tn, v=version_id) }}"
-               class="type-card">{{ tn }}</a>
+            <a href="{{ url_for('search_page', typename=tn, v=version_id) }}" class="type-card">{{ tn }}</a>
           {% endfor %}
         </div>
       {% endif %}
@@ -148,7 +134,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-  initAutocomplete('main-search-input', '/api/autocomplete');
-</script>
+<script>initAutocomplete('main-search-input', '/api/autocomplete');</script>
 {% endblock %}
