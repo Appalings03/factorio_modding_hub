@@ -269,7 +269,8 @@ def cmd_sync(args, config: dict):
         elif source == "raw_data":
             print_step("Synchronisation : data.raw JSON (instances vanilla)")
             try:
-                manager.sync_raw_data()
+                raw_version = getattr(args, "version", None)
+                manager.sync_raw_data(version_tag=raw_version)
                 print_ok("data.raw importé avec succès.")
             except Exception as e:
                 print_err(f"Échec raw_data : {e}")
@@ -466,7 +467,11 @@ Exemples :
     p_sync.add_argument(
         "--version",
         metavar="TAG",
-        help="Tag de version GitHub (ex: 2.0.65). Requis avec --source github",
+        help=(
+            "Tag de version à utiliser. "
+            "Pour --source github : tag Git (ex: 2.0.65). "
+            "Pour --source raw_data : force la version en DB (ex: 2.0.76)."
+        ),
     )
     p_sync.add_argument(
         "--force",

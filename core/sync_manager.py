@@ -45,17 +45,29 @@ class SyncManager:
 
         print(f"[sync] API docs importées : {len(types)} types")
 
-    def sync_raw_data(self) -> None:
-        """Étape 2 : importe les instances depuis le gist data.raw"""
-        scraper  = RawDataScraper(self.cache_dir / "raw_data")
-        data     = scraper.fetch()
+    def sync_raw_data(self, version_tag: str | None = None) -> None:
+        """
+        Étape 2 : importe les instances depuis le gist data.raw.
+        
+        version_tag : si fourni, utilise ce tag au lieu de celui du meta fichier.
+                      Utile pour aligner raw_data sur la même version qu'api_docs.
+        """
+        scraper = RawDataScraper(self.cache_dir / "raw_data")
+        data    = scraper.fetch()
 
-        # Version issue du meta fichier
-        meta_file = self.cache_dir / "raw_data" / "data_raw_meta.json"
-        meta      = json.loads(meta_file.read_text()) if meta_file.exists() else {}
-        version_tag = meta.get("game_version", "2.0.65-space-age")
+        # Détermination de la version
+        if version_tag:
+            # Version fournie explicitement (ex: "2.0.76")
+            actual_version = version_tag
+            print(f"[sync] Version raw_data forcée : {actual_version}")
+        else:
+            # Fallback : lire depuis le meta fichier
+            meta_file = self.cache_dir / "raw_data" / "data_raw_meta.json"
+            meta      = json.loads(meta_file.read_text(encoding="utf-8")) if meta_file.exists() else {}
+            actual_version = meta.get("game_version", "2.0.65-space-age")
+            print(f"[sync] Version raw_data depuis meta : {actual_version}")
 
-        version_id = self.repo.upsert_version(version_tag, source="raw_data")
+        version_id = self.repo.upsert_version(actual_version, source="raw_data")
 
         count = 0
         for typename, proto_name, proto_dict in scraper.iter_prototypes(data):
@@ -65,21 +77,14 @@ class SyncManager:
                 print(f"[sync] {count} prototypes importés...")
 
         # Extraction des propriétés plates pour FTS et diff
-        import traceback
-        try:
-            self.repo.rebuild_properties_flat(version_id)
-        except Exception as e:
-            traceback.print_exc()
-            raise
+        self.repo.rebuild_properties_flat(version_id)
         # Extraction des relations (ingredients, results, etc.)
         self.repo.extract_relations(version_id)
 
-        print(f"[sync] data.raw importé : {count} prototypes")
+        print(f"[sync] data.raw importé : {count} prototypes (version: {actual_version})")
 
     def sync_github(self, version_tag: str, token: str = None) -> None:
         """Étape 3 : télécharge les Lua pour une version spécifique"""
         scraper = GitHubScraper(self.cache_dir, token=token)
         scraper.sync_version(version_tag)
-        # Le parsing Lua est différé (phase 2 ou option avancée)
         print(f"[sync] GitHub {version_tag} mis en cache")
-

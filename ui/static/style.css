@@ -444,6 +444,33 @@ tr:hover td { background: var(--bg-panel); }
   transition: background 0.15s;
 }
 .hero-search-btn:hover { background: var(--link-hover); }
+.hero-version-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.75rem;
+}
+ 
+.hero-version-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+ 
+.hero-version-select {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+}
+.hero-version-select:focus { border: none; }
 
 /* Stats */
 .hero-stats { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }

@@ -23,6 +23,26 @@
       </div>
     </form>
 
+    {# Sélecteur de version #}
+    {% if versions %}
+    <div class="hero-version-bar">
+      <span class="hero-version-label">Version active :</span>
+      <form class="hero-version-form" action="{{ url_for('set_default_version') }}" method="post">
+        <select name="version_id" class="hero-version-select" onchange="this.form.submit()">
+          {% for ver in versions %}
+            <option value="{{ ver.id }}"
+                    {% if ver.id == version_id %}selected{% endif %}>
+              {{ ver.version_tag }}
+              {% if ver.is_latest %}★{% endif %}
+              — {{ ver.sources_synced | replace('["','') | replace('"]','') | replace('","',' + ') }}
+            </option>
+          {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-secondary btn-sm">Appliquer</button></noscript>
+      </form>
+    </div>
+    {% endif %}
+
     {# Stats globales #}
     {% if stats %}
     <div class="hero-stats">
@@ -34,12 +54,10 @@
         <span class="stat-num">{{ stats.type_count }}</span>
         <span class="stat-label">types</span>
       </div>
-      {% if stats.version_tag %}
       <div class="stat-pill">
         <span class="stat-num">{{ stats.version_tag }}</span>
-        <span class="stat-label">version</span>
+        <span class="stat-label">version active</span>
       </div>
-      {% endif %}
     </div>
     {% endif %}
   </section>

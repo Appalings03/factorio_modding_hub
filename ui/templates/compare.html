@@ -10,7 +10,11 @@
     {% if typename %}
       <a href="{{ url_for('search_page', typename=typename) }}">{{ typename }}</a>
       <span class="bc-sep">›</span>
-      <a href="{{ url_for('prototype_detail', typename=typename, name=name) }}">{{ name }}</a>
+      {% if name %}
+        <a href="{{ url_for('prototype_detail', typename=typename, name=name) }}">{{ name }}</a>
+      {% else %}
+        <span>—</span>
+      {% endif %}
       <span class="bc-sep">›</span>
     {% endif %}
     <span>Comparaison</span>

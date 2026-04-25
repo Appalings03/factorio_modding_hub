@@ -73,6 +73,30 @@ def create_app(config: dict) -> Flask:
             type_groups=type_groups,
             stats=stats,
         )
+    
+    @app.route("/set-version", methods=["POST"])
+    def set_default_version():
+        """
+        Marque une version comme is_latest en DB.
+        Redirige vers l'index avec la nouvelle version active.
+        """
+        version_id_str = request.form.get("version_id", "")
+        try:
+            new_vid = int(version_id_str)
+        except ValueError:
+            flash("Version invalide.", "error")
+            return redirect(url_for("index"))
+ 
+        # Récupère le tag correspondant
+        versions = repo.get_all_versions()
+        target   = next((v for v in versions if v["id"] == new_vid), None)
+        if not target:
+            flash("Version introuvable.", "error")
+            return redirect(url_for("index"))
+ 
+        repo.set_latest_version(target["version_tag"])
+        flash(f"Version active : {target['version_tag']}", "success")
+        return redirect(url_for("index"))
 
     @app.route("/search")
     def search_page():
