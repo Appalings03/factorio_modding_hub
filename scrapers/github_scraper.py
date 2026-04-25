@@ -13,7 +13,9 @@ REPO       = "wube/factorio-data"
 PROTOTYPE_PATHS = [
     "base/prototypes/",
     "core/prototypes/",
-    "space-age/prototypes/",   # DLC Space Age
+    "space-age/prototypes/",      # DLC Space Age
+    "elevated-rail/prototypes/",  # DLC Elevated Rail
+    "quality/prototypes/",        # DLC Quality
 ]
 
 class GitHubScraper:
@@ -83,7 +85,7 @@ class GitHubScraper:
         )
         return base64.b64decode(data["content"]).decode("utf-8")
 
-    def sync_version(self, version_tag: str) -> Path:
+    def sync_version(self, version_tag: str, force: bool = False) -> Path:
         """
         Télécharge tous les fichiers Lua de prototype pour un tag donné.
         Stocke dans : cache/github/<version_tag>/<path>.lua
@@ -94,8 +96,12 @@ class GitHubScraper:
         meta_file   = version_dir / ".sync_complete"
 
         if meta_file.exists():
-            print(f"[github] Version {version_tag} déjà synchronisée")
-            return version_dir
+            if force:
+                meta_file.unlink()
+                print(f"[github] Force refresh — .sync_complete supprimé pour {version_tag}")
+            else:
+                print(f"[github] Version {version_tag} déjà synchronisée")
+                return version_dir
 
         lua_files = self.get_lua_prototype_files(version_tag)
         print(f"[github] {len(lua_files)} fichiers Lua trouvés pour {version_tag}")

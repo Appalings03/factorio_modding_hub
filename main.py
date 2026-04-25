@@ -293,7 +293,7 @@ def cmd_sync(args, config: dict):
                         "  Ajoutez github_token dans config/settings.toml "
                         "ou GITHUB_TOKEN en variable d'environnement."
                     )
-                manager.sync_github(version, token=token)
+                manager.sync_github(version, token=token, force=getattr(args, "force_refresh", False))
                 print_ok(f"GitHub {version} synchronisé.")
             except Exception as e:
                 print_err(f"Échec github : {e}")
