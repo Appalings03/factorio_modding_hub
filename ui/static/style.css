@@ -519,6 +519,7 @@ tr:hover td { background: var(--bg-panel); }
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
 }
 
 /* Quick links */
