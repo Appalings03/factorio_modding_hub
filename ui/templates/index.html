@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Factorio Modding Hub — Accueil{% endblock %}
+
+{% block content %}
+<div class="page-home">
+
+  {# ── Hero ── #}
+  <section class="home-hero">
+    <div class="hero-text">
+      <h1 class="hero-title">
+        <span class="hero-bracket">[</span>FMH<span class="hero-bracket">]</span>
+      </h1>
+      <p class="hero-sub">Centralisateur local de prototypes Factorio pour moddeurs.</p>
+    </div>
+
+    <form class="hero-search-form" action="{{ url_for('search_page') }}" method="get">
+      <div class="hero-search-wrap">
+        <input type="text" name="q" id="hero-search-input"
+               placeholder="Chercher un prototype… ex: assembling-machine-1"
+               autocomplete="off" class="hero-search-input">
+        {% if version_id %}<input type="hidden" name="v" value="{{ version_id }}">{% endif %}
+        <button type="submit" class="hero-search-btn">→</button>
+      </div>
+    </form>
+
+    {# Stats globales #}
+    {% if stats %}
+    <div class="hero-stats">
+      <div class="stat-pill">
+        <span class="stat-num">{{ stats.proto_count }}</span>
+        <span class="stat-label">prototypes</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num">{{ stats.type_count }}</span>
+        <span class="stat-label">types</span>
+      </div>
+      {% if stats.version_tag %}
+      <div class="stat-pill">
+        <span class="stat-num">{{ stats.version_tag }}</span>
+        <span class="stat-label">version</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  {# ── Grille des catégories ── #}
+  {% if type_groups %}
+  <section class="home-categories" id="types">
+    <h2 class="section-title">Types de prototypes</h2>
+
+    {% for group in type_groups %}
+    <div class="type-group">
+      <div class="type-group-header">
+        <span class="type-group-icon">{{ group.icon }}</span>
+        <h3 class="type-group-name">{{ group.category }}</h3>
+        <span class="type-group-count muted">{{ group.cards | length }} types</span>
+      </div>
+
+      <div class="type-group-cards">
+        {% for card in group.cards %}
+        <a href="{{ url_for('search_page', typename=card.typename, v=version_id) }}"
+           class="type-group-card">
+          <div class="tgc-top">
+            <code class="tgc-name">{{ card.typename }}</code>
+            {% if card.count %}
+            <span class="tgc-count">{{ card.count }}</span>
+            {% endif %}
+          </div>
+          {% if card.description %}
+          <p class="tgc-desc">{{ card.description }}</p>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  {% else %}
+  <div class="empty-state">
+    <p>Aucune donnée synchronisée.</p>
+    <p class="muted">Lancez <code>python main.py sync</code> pour importer les prototypes.</p>
+  </div>
+  {% endif %}
+
+  {# ── Liens rapides ── #}
+  <section class="home-links">
+    <a href="{{ url_for('search_page') }}" class="quicklink">
+      <span class="ql-icon">⌕</span>
+      <span class="ql-label">Recherche avancée</span>
+    </a>
+    <a href="{{ url_for('compare_page') }}" class="quicklink">
+      <span class="ql-icon">⇄</span>
+      <span class="ql-label">Comparer versions</span>
+    </a>
+    <a href="{{ url_for('status_page') }}" class="quicklink">
+      <span class="ql-icon">◈</span>
+      <span class="ql-label">État de la base</span>
+    </a>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  initAutocomplete('hero-search-input', '/api/autocomplete');
+</script>
+{% endblock %}

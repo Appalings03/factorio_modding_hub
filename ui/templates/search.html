@@ -92,53 +92,55 @@
         {% endif %}
 
       {% else %}
-  {# Page d'accueil — grille enrichie par catégorie #}
-  <div class="type-grid" id="types">
+        <div class="empty-state">
+          <p>Aucun prototype trouvé{% if query %} pour <em>« {{ query }} »</em>{% endif %}.</p>
+          <p class="muted">Conseil : utilisez <code>*</code> pour une recherche par préfixe (ex: <code>iron*</code>)</p>
+        </div>
+      {% endif %}
+    </section>
 
-    {% if type_cards %}
-      {% for group in type_cards %}
-      <section class="type-category">
-        <h2 class="type-category-title">{{ group.category }}</h2>
-        <div class="type-cards">
-          {% for card in group.cards %}
-          <a href="{{ url_for('search_page', typename=card.typename, v=version_id) }}"
-             class="type-card-rich">
-            <div class="type-card-header">
-              <span class="type-card-name">{{ card.typename }}</span>
-              {% if card.count %}
-                <span class="type-card-count">{{ card.count }}</span>
+  {% else %}
+    {# ── Grille des types — organisée par catégorie ── #}
+    <section class="type-browser" id="types">
+      <h2 class="section-title">
+        Types de prototypes disponibles
+        <span class="muted" style="font-size:0.8rem;font-weight:normal;">
+          — {{ typenames | length }} types
+        </span>
+      </h2>
+
+      {% if type_cards %}
+        {% for group in type_cards %}
+        <div class="tb-group">
+          <h3 class="tb-group-title">{{ group.category }}</h3>
+          <div class="tb-cards">
+            {% for card in group.cards %}
+            <a href="{{ url_for('search_page', typename=card.typename, v=version_id) }}"
+               class="tb-card">
+              <div class="tb-card-top">
+                <code class="tb-card-name">{{ card.typename }}</code>
+                {% if card.count %}
+                <span class="tb-card-count">{{ card.count }}</span>
+                {% endif %}
+              </div>
+              {% if card.description %}
+              <p class="tb-card-desc">{{ card.description }}</p>
               {% endif %}
-            </div>
-            {% if card.description %}
-              <p class="type-card-desc">{{ card.description }}</p>
-            {% endif %}
-          </a>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+      {% else %}
+        {# Fallback : liste plate si pas de type_cards #}
+        <div class="type-cards">
+          {% for tn in typenames %}
+            <a href="{{ url_for('search_page', typename=tn, v=version_id) }}"
+               class="type-card">{{ tn }}</a>
           {% endfor %}
         </div>
-      </section>
-      {% endfor %}
-    {% else %}
-      {# Fallback simple si pas de données #}
-      <div class="type-cards">
-        {% for tn in typenames %}
-          <a href="{{ url_for('search_page', typename=tn, v=version_id) }}"
-             class="type-card">{{ tn }}</a>
-        {% endfor %}
-      </div>
-    {% endif %}
-  </div>
-{% endif %}
-    </section>
-  {% else %}
-    {# Première visite — affiche les types disponibles #}
-    <section class="type-grid" id="types">
-      <h2 class="section-title">Types de prototypes disponibles</h2>
-      <div class="type-cards">
-        {% for tn in typenames %}
-          <a href="{{ url_for('search_page', typename=tn, v=version_id) }}"
-             class="type-card">{{ tn }}</a>
-        {% endfor %}
-      </div>
+      {% endif %}
     </section>
   {% endif %}
 
@@ -147,7 +149,6 @@
 
 {% block scripts %}
 <script>
-  // Suggestions d'autocomplétion sur le champ principal
   initAutocomplete('main-search-input', '/api/autocomplete');
 </script>
 {% endblock %}

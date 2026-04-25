@@ -62,7 +62,17 @@ def create_app(config: dict) -> Flask:
 
     @app.route("/")
     def index():
-        return redirect(url_for("search_page"))
+        versions   = repo.get_all_versions()
+        version_id = _get_version_id(request, repo, versions)
+        typenames  = search.get_typenames(version_id)
+        type_groups = _build_type_groups(repo, version_id, typenames)
+        stats      = _build_stats(repo, version_id, versions)
+ 
+        return render_template(
+            "index.html",
+            type_groups=type_groups,
+            stats=stats,
+        )
 
     @app.route("/search")
     def search_page():
@@ -490,3 +500,53 @@ def _guess_ref_typename(key: str) -> str | None:
         "module_category":  "module-category",
     }
     return mappings.get(key)
+
+_CATEGORY_ICONS = {
+    "Items & Fluides":        "◈",
+    "Recettes & Crafting":    "⚙",
+    "Entités":                "⬡",
+    "Technologie":            "⬡",
+    "Signaux & Combinateurs": "⟨⟩",
+    "Équipement":             "▣",
+    "Achievements":           "★",
+    "Sons & Visuels":         "◉",
+    "Autres":                 "•",
+}
+ 
+ 
+def _build_type_groups(repo, version_id, typenames):
+    """
+    Comme _build_type_cards mais retourne la liste avec icônes,
+    pour la homepage index.html.
+    """
+    cards_data = _build_type_cards(repo, version_id, typenames)
+    result = []
+    for group in cards_data:
+        cat = group["category"]
+        result.append({
+            "category": cat,
+            "icon":     _CATEGORY_ICONS.get(cat, "•"),
+            "cards":    group["cards"],
+        })
+    return result
+ 
+ 
+def _build_stats(repo, version_id, versions):
+    """Stats globales pour le hero de la homepage."""
+    if not version_id:
+        return None
+    with repo._conn() as con:
+        proto_count = con.execute(
+            "SELECT COUNT(*) FROM prototypes WHERE version_id = ?",
+            (version_id,),
+        ).fetchone()[0]
+        type_count = con.execute(
+            "SELECT COUNT(DISTINCT typename) FROM prototypes WHERE version_id = ?",
+            (version_id,),
+        ).fetchone()[0]
+    version_tag = _version_tag_from_id(version_id, versions)
+    return {
+        "proto_count": proto_count,
+        "type_count":  type_count,
+        "version_tag": version_tag,
+    }
