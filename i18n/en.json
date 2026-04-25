@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "name": "English",
+    "native_name": "English",
+    "flag": "🇬🇧"
+  },
+
+  "nav": {
+    "search": "Search",
+    "types": "Types",
+    "status": "DB Status",
+    "search_placeholder": "Search a prototype…"
+  },
+
+  "footer": {
+    "local_only": "Local use only"
+  },
+
+  "home": {
+    "subtitle": "Local Factorio prototype centralizer for modders.",
+    "search_placeholder": "Search a prototype… e.g. assembling-machine-1",
+    "version_active": "Active version:",
+    "no_data": "No data synchronized.",
+    "no_data_hint": "Run <code>python main.py sync</code> to import prototypes.",
+    "types_title": "Prototype types",
+    "quicklink_search": "Advanced search",
+    "quicklink_compare": "Compare versions",
+    "quicklink_status": "DB Status"
+  },
+
+  "stats": {
+    "prototypes": "prototypes",
+    "types": "types",
+    "version_active": "active version"
+  },
+
+  "search": {
+    "title": "Search — Factorio Modding Hub",
+    "placeholder": "Prototype name, property, type…",
+    "all_types": "All types",
+    "btn_search": "Search",
+    "results_count_one": "result for",
+    "results_count_many": "results for",
+    "prototypes_count_one": "prototype",
+    "prototypes_count_many": "prototypes",
+    "col_name": "Name",
+    "col_type": "Type",
+    "col_localised": "Localised name",
+    "col_subgroup": "Subgroup",
+    "no_results": "No prototype found",
+    "no_results_hint": "Tip: use <code>*</code> for prefix search (e.g. <code>iron*</code>)",
+    "types_available": "Available prototype types",
+    "prev": "← Previous",
+    "next": "Next →",
+    "page_of": "Page {page} / {pages}"
+  },
+
+  "detail": {
+    "title": "{name} — FMH",
+    "inheritance": "Inheritance",
+    "subtypes": "Subtypes:",
+    "properties": "Properties",
+    "filter_placeholder": "Filter properties…",
+    "show_schema": "Show official schema",
+    "col_property": "Property",
+    "col_expected_type": "Expected type",
+    "col_required": "Required",
+    "required": "required",
+    "optional": "optional",
+    "outgoing_refs": "Outgoing references",
+    "col_ref_type": "Type",
+    "col_target": "Target",
+    "col_via": "Via",
+    "used_by": "Used by",
+    "raw_json": "Raw JSON",
+    "copy": "Copy",
+    "compare_versions": "Compare versions",
+    "annotations_title": "My annotations",
+    "no_annotations": "No annotations.",
+    "annotation_placeholder": "Your note…",
+    "annotation_tags_placeholder": "comma-separated tags (e.g. todo,bug)",
+    "annotation_save": "Save",
+    "annotation_delete_confirm": "Delete this annotation?"
+  },
+
+  "compare": {
+    "title": "Comparison — FMH",
+    "page_title": "Version comparison",
+    "choose_type": "— Choose a type —",
+    "proto_placeholder": "Prototype name (e.g. iron-plate)",
+    "version_a": "Version A",
+    "version_a_hint": "(reference)",
+    "version_b": "Version B",
+    "version_b_hint": "(target)",
+    "btn_compare": "Compare",
+    "col_property": "Property",
+    "added_one": "added",
+    "added_many": "added",
+    "removed_one": "removed",
+    "removed_many": "removed",
+    "modified_one": "modified",
+    "modified_many": "modified",
+    "new_in": "New in",
+    "removed_in": "Removed in",
+    "no_changes": "No changes detected between these two versions."
+  },
+
+  "status": {
+    "title": "DB Status — FMH",
+    "page_title": "Database status",
+    "not_initialized": "Database not initialized.",
+    "run_sync": "Run <code>python main.py sync</code> to initialize.",
+    "col_version": "Version",
+    "col_sources": "Sources",
+    "col_date": "Date",
+    "col_latest": "Latest",
+    "no_versions": "No version synchronized.",
+    "row_types": "Prototype types",
+    "row_prototypes": "Prototypes (instances)",
+    "row_schema_props": "Schema properties",
+    "row_annotations": "User annotations",
+    "cache_title": "Cache"
+  },
+
+  "annotations": {
+    "saved": "Annotation saved.",
+    "deleted": "Annotation deleted.",
+    "empty_error": "Annotation cannot be empty."
+  },
+
+  "flash": {
+    "no_version": "No version synchronized. Run 'sync' first.",
+    "invalid_version": "Invalid version.",
+    "version_not_found": "Version not found.",
+    "version_set": "Active version: {tag}",
+    "unknown_lang": "Unknown language: {lang}"
+  },
+
+  "lang": {
+    "selector_label": "Language:"
+  },
+
+  "cli": {
+    "sync_api_docs": "Synchronizing: prototype-api.json (type schema)",
+    "sync_raw_data": "Synchronizing: data.raw JSON (vanilla instances)",
+    "sync_github": "Synchronizing: GitHub wube/factorio-data @ {version}",
+    "sync_done": "Synchronization completed in {elapsed}s",
+    "sync_ok_api": "prototype-api.json imported successfully.",
+    "sync_ok_raw": "data.raw imported successfully.",
+    "sync_ok_github": "GitHub {version} synchronized.",
+    "sync_fail_api": "api_docs failed: {error}",
+    "sync_fail_raw": "raw_data failed: {error}",
+    "sync_fail_github": "github failed: {error}",
+    "no_token_warn": "No GitHub token configured. Limit: 60 req/h.",
+    "no_token_hint": "Add github_token in config/settings.toml or GITHUB_TOKEN env var.",
+    "serve_starting": "Starting server on {url}",
+    "serve_stop": "Ctrl+C to stop",
+    "serve_no_db": "Database not found.\nRun: python main.py sync",
+    "serve_port_error": "Cannot start on port {port}: {error}\nTry: python main.py serve --port {next_port}",
+    "status_title": "Database status",
+    "reset_title": "Reset database and caches",
+    "reset_no_db": "Database does not exist, nothing to delete.",
+    "reset_no_cache": "Cache does not exist, nothing to delete.",
+    "reset_db_done": "Database deleted: {path}",
+    "reset_cache_done": "Cache deleted: {path}",
+    "reset_done": "Reset complete. Run 'sync' to reinitialize.",
+    "reset_confirm_required": "This command deletes ALL synchronized data.\nAdd --confirm to proceed.",
+    "module_missing": "Missing module: {error}"
+  }
+}

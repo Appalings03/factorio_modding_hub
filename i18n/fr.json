@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "name": "French",
+    "native_name": "Français",
+    "flag": "🇫🇷"
+  },
+
+  "nav": {
+    "search": "Recherche",
+    "types": "Types",
+    "status": "État DB",
+    "search_placeholder": "Rechercher un prototype…"
+  },
+
+  "footer": {
+    "local_only": "Usage local uniquement"
+  },
+
+  "home": {
+    "subtitle": "Centralisateur local de prototypes Factorio pour moddeurs.",
+    "search_placeholder": "Chercher un prototype… ex: assembling-machine-1",
+    "version_active": "Version active :",
+    "no_data": "Aucune donnée synchronisée.",
+    "no_data_hint": "Lancez <code>python main.py sync</code> pour importer les prototypes.",
+    "types_title": "Types de prototypes",
+    "quicklink_search": "Recherche avancée",
+    "quicklink_compare": "Comparer versions",
+    "quicklink_status": "État de la base"
+  },
+
+  "stats": {
+    "prototypes": "prototypes",
+    "types": "types",
+    "version_active": "version active"
+  },
+
+  "search": {
+    "title": "Recherche — Factorio Modding Hub",
+    "placeholder": "Nom de prototype, propriété, type…",
+    "all_types": "Tous les types",
+    "btn_search": "Rechercher",
+    "results_count_one": "résultat pour",
+    "results_count_many": "résultats pour",
+    "prototypes_count_one": "prototype",
+    "prototypes_count_many": "prototypes",
+    "col_name": "Nom",
+    "col_type": "Type",
+    "col_localised": "Nom localisé",
+    "col_subgroup": "Subgroup",
+    "no_results": "Aucun prototype trouvé",
+    "no_results_hint": "Conseil : utilisez <code>*</code> pour une recherche par préfixe (ex: <code>iron*</code>)",
+    "types_available": "Types de prototypes disponibles",
+    "prev": "← Précédent",
+    "next": "Suivant →",
+    "page_of": "Page {page} / {pages}"
+  },
+
+  "detail": {
+    "title": "{name} — FMH",
+    "inheritance": "Héritage",
+    "subtypes": "Sous-types :",
+    "properties": "Propriétés",
+    "filter_placeholder": "Filtrer les propriétés…",
+    "show_schema": "Afficher le schéma officiel",
+    "col_property": "Propriété",
+    "col_expected_type": "Type attendu",
+    "col_required": "Requis",
+    "required": "requis",
+    "optional": "optionnel",
+    "outgoing_refs": "Références sortantes",
+    "col_ref_type": "Type",
+    "col_target": "Cible",
+    "col_via": "Via",
+    "used_by": "Utilisé par",
+    "raw_json": "JSON brut",
+    "copy": "Copier",
+    "compare_versions": "Comparer les versions",
+    "annotations_title": "Mes annotations",
+    "no_annotations": "Aucune annotation.",
+    "annotation_placeholder": "Votre note…",
+    "annotation_tags_placeholder": "tags séparés par virgules (ex: todo,bug)",
+    "annotation_save": "Enregistrer",
+    "annotation_delete_confirm": "Supprimer cette annotation ?"
+  },
+
+  "compare": {
+    "title": "Comparaison — FMH",
+    "page_title": "Comparaison de version",
+    "choose_type": "— Choisir un type —",
+    "proto_placeholder": "Nom du prototype (ex: iron-plate)",
+    "version_a": "Version A",
+    "version_a_hint": "(référence)",
+    "version_b": "Version B",
+    "version_b_hint": "(cible)",
+    "btn_compare": "Comparer",
+    "col_property": "Propriété",
+    "added_one": "ajouté",
+    "added_many": "ajoutés",
+    "removed_one": "supprimé",
+    "removed_many": "supprimés",
+    "modified_one": "modifié",
+    "modified_many": "modifiés",
+    "new_in": "Nouveau dans",
+    "removed_in": "Supprimé dans",
+    "no_changes": "Aucun changement détecté entre ces deux versions."
+  },
+
+  "status": {
+    "title": "État DB — FMH",
+    "page_title": "État de la base de données",
+    "not_initialized": "Base de données non initialisée.",
+    "run_sync": "Lancez <code>python main.py sync</code> pour initialiser.",
+    "col_version": "Version",
+    "col_sources": "Sources",
+    "col_date": "Date",
+    "col_latest": "Latest",
+    "no_versions": "Aucune version synchronisée.",
+    "row_types": "Types de prototypes",
+    "row_prototypes": "Prototypes (instances)",
+    "row_schema_props": "Propriétés de schéma",
+    "row_annotations": "Annotations utilisateur",
+    "cache_title": "Cache"
+  },
+
+  "annotations": {
+    "saved": "Annotation enregistrée.",
+    "deleted": "Annotation supprimée.",
+    "empty_error": "L'annotation ne peut pas être vide."
+  },
+
+  "flash": {
+    "no_version": "Aucune version synchronisée. Lancez 'sync' d'abord.",
+    "invalid_version": "Version invalide.",
+    "version_not_found": "Version introuvable.",
+    "version_set": "Version active : {tag}",
+    "unknown_lang": "Langue inconnue : {lang}"
+  },
+
+  "lang": {
+    "selector_label": "Langue :"
+  },
+
+  "cli": {
+    "sync_api_docs": "Synchronisation : prototype-api.json (schéma des types)",
+    "sync_raw_data": "Synchronisation : data.raw JSON (instances vanilla)",
+    "sync_github": "Synchronisation : GitHub wube/factorio-data @ {version}",
+    "sync_done": "Synchronisation terminée en {elapsed}s",
+    "sync_ok_api": "prototype-api.json importé avec succès.",
+    "sync_ok_raw": "data.raw importé avec succès.",
+    "sync_ok_github": "GitHub {version} synchronisé.",
+    "sync_fail_api": "Échec api_docs : {error}",
+    "sync_fail_raw": "Échec raw_data : {error}",
+    "sync_fail_github": "Échec github : {error}",
+    "no_token_warn": "Pas de token GitHub configuré. Limite : 60 req/h.",
+    "no_token_hint": "Ajoutez github_token dans config/settings.toml ou GITHUB_TOKEN en variable d'environnement.",
+    "serve_starting": "Démarrage du serveur sur {url}",
+    "serve_stop": "Ctrl+C pour arrêter",
+    "serve_no_db": "Base de données introuvable.\nLancez d'abord : python main.py sync",
+    "serve_port_error": "Impossible de démarrer sur le port {port} : {error}\nEssayez : python main.py serve --port {next_port}",
+    "status_title": "État de la base de données",
+    "reset_title": "Reset de la base de données et des caches",
+    "reset_no_db": "Base inexistante, rien à supprimer.",
+    "reset_no_cache": "Cache inexistant, rien à supprimer.",
+    "reset_db_done": "Base supprimée : {path}",
+    "reset_cache_done": "Cache supprimé : {path}",
+    "reset_done": "Reset terminé. Relancez 'sync' pour réinitialiser.",
+    "reset_confirm_required": "Cette commande supprime TOUTES les données synchronisées.\nAjoutez --confirm pour confirmer.",
+    "module_missing": "Module manquant : {error}"
+  }
+}
