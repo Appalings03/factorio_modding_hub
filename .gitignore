@@ -14,6 +14,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 .pytest_cache/
+main_old.py
 
 # Éditeurs
 .vscode/

@@ -4,7 +4,7 @@ main.py — Point d'entrée de Factorio Modding Hub
 Usage :
     python main.py sync --all
     python main.py sync --source api_docs
-    python main.py sync --source raw_data
+    python main.py sync --source raw_data [--version 2.0.76]
     python main.py sync --source github --version 2.0.65
     python main.py serve [--port 5000] [--no-browser] [--debug]
     python main.py status
@@ -33,7 +33,7 @@ try:
     import tomllib
 except ImportError:
     try:
-        import tomli as tomllib 
+        import tomli as tomllib
     except ImportError:
         tomllib = None
 
@@ -51,28 +51,29 @@ DEFAULT_CONFIG = {
         ),
         "prototype_api_url": "https://lua-api.factorio.com/latest/prototype-api.json",
         "github_repo":       "wube/factorio-data",
-        "github_token":      None,  # Surcharger dans settings.toml
+        "github_token":      None,
     },
     "server": {
         "host":  "127.0.0.1",
         "port":  5000,
         "debug": False,
     },
+    "ui": {
+        "language": "en",
+    },
 }
 
 
 def load_config() -> dict:
-    """
-    Charge settings.toml si présent, fusionne avec DEFAULT_CONFIG.
-    Les clés de settings.toml ont priorité sur les défauts.
-    """
     config = DEFAULT_CONFIG.copy()
+    # Copie profonde des sous-dicts
+    config = {k: (dict(v) if isinstance(v, dict) else v) for k, v in DEFAULT_CONFIG.items()}
+
     settings_path = PROJECT_ROOT / "config" / "settings.toml"
 
     if settings_path.exists() and tomllib is not None:
         with open(settings_path, "rb") as f:
             user_config = tomllib.load(f)
-        # Fusion récursive superficielle (1 niveau de profondeur)
         for section, values in user_config.items():
             if section in config and isinstance(values, dict):
                 config[section].update(values)
@@ -80,12 +81,10 @@ def load_config() -> dict:
                 config[section] = values
     elif settings_path.exists() and tomllib is None:
         print(
-            "[config] Avertissement : settings.toml trouvé mais tomllib/tomli "
-            "non installé. Utilisation des valeurs par défaut.\n"
-            "         Installez tomli : pip install tomli"
+            "[config] Warning: settings.toml found but tomllib/tomli not installed.\n"
+            "         Install tomli: pip install tomli"
         )
 
-    # Résolution des chemins relatifs
     config["database"]["path"] = str(
         Path(config["database"]["path"]).expanduser().resolve()
     )
@@ -93,11 +92,24 @@ def load_config() -> dict:
         Path(config["cache"]["dir"]).expanduser().resolve()
     )
 
-    # Surcharge via variables d'environnement
     if token := os.environ.get("GITHUB_TOKEN"):
         config["sources"]["github_token"] = token
 
     return config
+
+
+# ---------------------------------------------------------------------------
+# i18n CLI
+# ---------------------------------------------------------------------------
+def _init_i18n(config: dict):
+    """Initialise le système i18n pour le CLI."""
+    try:
+        from core.i18n import init_from_config, t as _t
+        init_from_config(config)
+        return _t
+    except ImportError:
+        # Fallback si core/i18n.py absent
+        return lambda key, **kw: key
 
 
 # ---------------------------------------------------------------------------
@@ -110,40 +122,33 @@ RED    = "\033[91m"
 BOLD   = "\033[1m"
 RESET  = "\033[0m"
 
-def configure_output_streams():
-    """Evite les plantages d'affichage sur consoles non UTF-8."""
-    for stream_name in ("stdout", "stderr"):
-        stream = getattr(sys, stream_name, None)
-        reconfigure = getattr(stream, "reconfigure", None)
-        if reconfigure is None:
-            continue
-        try:
-            reconfigure(errors="replace")
-        except Exception:
-            pass
 
 def _c(text: str, color: str) -> str:
-    """Colorise le texte si stdout est un terminal."""
     if sys.stdout.isatty():
         return f"{color}{text}{RESET}"
     return text
+
 
 def print_header():
     print()
     print(_c("╔══════════════════════════════════════╗", CYAN))
     print(_c("║   Factorio Modding Hub               ║", CYAN))
-    print(_c("║   Centralisateur de prototypes       ║", CYAN))
+    print(_c("║   Prototype Centralizer               ║", CYAN))
     print(_c("╚══════════════════════════════════════╝", CYAN))
     print()
+
 
 def print_ok(msg: str):
     print(_c(f"  ✓ {msg}", GREEN))
 
+
 def print_warn(msg: str):
     print(_c(f"  ⚠ {msg}", YELLOW))
 
+
 def print_err(msg: str):
     print(_c(f"  ✗ {msg}", RED), file=sys.stderr)
+
 
 def print_step(msg: str):
     print(_c(f"\n▶ {msg}", BOLD))
@@ -152,24 +157,21 @@ def print_step(msg: str):
 # ---------------------------------------------------------------------------
 # Commande : status
 # ---------------------------------------------------------------------------
-def cmd_status(config: dict):
-    """Affiche l'état de la base de données et des caches."""
-    print_step("État de la base de données")
+def cmd_status(config: dict, t):
+    print_step(t("cli.status_title"))
 
     db_path = Path(config["database"]["path"])
     if not db_path.exists():
-        print_warn("Base de données inexistante — lancez 'sync' pour initialiser.")
+        print_warn(t("cli.serve_no_db"))
         return
 
     import sqlite3
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 
-    # Taille du fichier DB
     size_mb = db_path.stat().st_size / (1024 * 1024)
     print_ok(f"Base : {db_path}  ({size_mb:.1f} MB)")
 
-    # Versions synchronisées
     try:
         cur.execute(
             "SELECT version_tag, sources_synced, sync_date, is_latest "
@@ -183,19 +185,18 @@ def cmd_status(config: dict):
                 mark = " ◄" if latest else ""
                 print(f"  {tag:<15} {sources:<35} {date[:19]:<22}{mark}")
         else:
-            print_warn("Aucune version synchronisée.")
+            print_warn(t("status.no_versions"))
     except sqlite3.OperationalError:
-        print_warn("Tables manquantes — base non initialisée.")
+        print_warn(t("status.not_initialized"))
         con.close()
         return
 
-    # Compteurs
     print()
     tables = [
-        ("prototype_types", "Types de prototypes"),
-        ("prototypes",      "Prototypes (instances)"),
-        ("type_properties", "Propriétés de schéma"),
-        ("annotations",     "Annotations utilisateur"),
+        ("prototype_types", t("status.row_types")),
+        ("prototypes",      t("status.row_prototypes")),
+        ("type_properties", t("status.row_schema_props")),
+        ("annotations",     t("status.row_annotations")),
     ]
     for table, label in tables:
         try:
@@ -205,16 +206,14 @@ def cmd_status(config: dict):
         except sqlite3.OperationalError:
             print_warn(f"{label:<30}   table absente")
 
-    # Cache
     cache_dir = Path(config["cache"]["dir"])
-    print(f"\n  Cache : {cache_dir}")
+    print(f"\n  {t('status.cache_title')} : {cache_dir}")
     for subdir in ["raw_data", "api_docs", "github"]:
         sub = cache_dir / subdir
         if sub.exists():
             files = list(sub.rglob("*"))
             size  = sum(f.stat().st_size for f in files if f.is_file())
-            print_ok(f"  cache/{subdir:<12} {len(files):>4} fichiers  "
-                     f"({size / 1024:.0f} KB)")
+            print_ok(f"  cache/{subdir:<12} {len(files):>4} fichiers  ({size / 1024:.0f} KB)")
         else:
             print_warn(f"  cache/{subdir:<12} absent")
 
@@ -224,26 +223,18 @@ def cmd_status(config: dict):
 # ---------------------------------------------------------------------------
 # Commande : sync
 # ---------------------------------------------------------------------------
-def cmd_sync(args, config: dict):
-    """Orchestre la synchronisation des sources."""
-
-    # Import différé pour ne pas ralentir --help
+def cmd_sync(args, config: dict, t):
     try:
         from db.schema     import init_db
         from db.repository import Repository
         from core.sync_manager import SyncManager
     except ImportError as e:
-        print_err(
-            f"Module manquant : {e}\n"
-            "  Assurez-vous d'avoir créé db/schema.py, db/repository.py "
-            "et core/sync_manager.py"
-        )
+        print_err(t("cli.module_missing", error=str(e)))
         sys.exit(1)
 
     db_path   = Path(config["database"]["path"])
     cache_dir = Path(config["cache"]["dir"])
 
-    # Initialisation de la DB (idempotent)
     db_path.parent.mkdir(parents=True, exist_ok=True)
     cache_dir.mkdir(parents=True, exist_ok=True)
     init_db(db_path)
@@ -252,91 +243,79 @@ def cmd_sync(args, config: dict):
     manager = SyncManager(repo, cache_dir, config)
 
     sources = _resolve_sources(args)
-
     t_start = time.time()
 
     for source in sources:
         if source == "api_docs":
-            print_step("Synchronisation : prototype-api.json (schéma des types)")
+            print_step(t("cli.sync_api_docs"))
             try:
                 manager.sync_api_docs()
-                print_ok("prototype-api.json importé avec succès.")
+                print_ok(t("cli.sync_ok_api"))
             except Exception as e:
-                print_err(f"Échec api_docs : {e}")
+                print_err(t("cli.sync_fail_api", error=str(e)))
                 if args.fail_fast:
                     sys.exit(1)
 
         elif source == "raw_data":
-            print_step("Synchronisation : data.raw JSON (instances vanilla)")
+            print_step(t("cli.sync_raw_data"))
             try:
                 raw_version = getattr(args, "version", None)
                 manager.sync_raw_data(version_tag=raw_version)
-                print_ok("data.raw importé avec succès.")
+                print_ok(t("cli.sync_ok_raw"))
             except Exception as e:
-                print_err(f"Échec raw_data : {e}")
+                print_err(t("cli.sync_fail_raw", error=str(e)))
                 if args.fail_fast:
                     sys.exit(1)
 
         elif source == "github":
             version = args.version or _ask_github_version(manager, config)
             if not version:
-                print_err("Version GitHub non spécifiée. "
-                          "Utilisez --version <tag>")
+                print_err("Version GitHub non spécifiée. Utilisez --version <tag>")
                 sys.exit(1)
-            print_step(f"Synchronisation : GitHub wube/factorio-data @ {version}")
+            print_step(t("cli.sync_github", version=version))
             try:
                 token = config["sources"].get("github_token")
                 if not token:
-                    print_warn(
-                        "Pas de token GitHub configuré. "
-                        "Limite : 60 req/h (suffisant pour 1 version).\n"
-                        "  Ajoutez github_token dans config/settings.toml "
-                        "ou GITHUB_TOKEN en variable d'environnement."
-                    )
-                manager.sync_github(version, token=token, force=getattr(args, "force_refresh", False))
-                print_ok(f"GitHub {version} synchronisé.")
+                    print_warn(t("cli.no_token_warn"))
+                    print_warn(t("cli.no_token_hint"))
+                force = getattr(args, "force_refresh", False)
+                manager.sync_github(version, token=token, force=force)
+                print_ok(t("cli.sync_ok_github", version=version))
             except Exception as e:
-                print_err(f"Échec github : {e}")
+                print_err(t("cli.sync_fail_github", error=str(e)))
                 if args.fail_fast:
                     sys.exit(1)
 
     elapsed = time.time() - t_start
     print()
-    print_ok(f"Synchronisation terminée en {elapsed:.1f}s")
+    print_ok(t("cli.sync_done", elapsed=f"{elapsed:.1f}"))
     repo.close()
 
 
 def _resolve_sources(args) -> list[str]:
-    """Détermine la liste de sources à synchroniser depuis les arguments CLI."""
     if getattr(args, "all", False):
-        # Ordre important : schéma avant instances
         return ["api_docs", "raw_data", "github"]
     if getattr(args, "source", None):
         return [args.source]
-    # Par défaut sans --source : les deux sources principales
     return ["api_docs", "raw_data"]
 
 
 def _ask_github_version(manager, config: dict) -> str | None:
-    """
-    Si --version non fourni, propose les 10 derniers tags GitHub.
-    Retourne le tag choisi ou None.
-    """
     try:
         from scrapers.github_scraper import GitHubScraper
         token   = config["sources"].get("github_token")
         cache   = Path(config["cache"]["dir"])
         scraper = GitHubScraper(cache, token=token)
-        print("  Récupération des versions disponibles...")
+        print("  Fetching available versions...")
         versions = scraper.list_versions(limit=10)
     except Exception:
         return None
 
-    print("\n  Versions disponibles :")
+    print("\n  Available versions:")
     for i, v in enumerate(versions, 1):
         print(f"    {i:>2}. {v}")
     print()
-    choice = input("  Numéro de version (Entrée pour annuler) : ").strip()
+    choice = input("  Version number (Enter to cancel): ").strip()
     if not choice:
         return None
     try:
@@ -348,23 +327,16 @@ def _ask_github_version(manager, config: dict) -> str | None:
 # ---------------------------------------------------------------------------
 # Commande : serve
 # ---------------------------------------------------------------------------
-def cmd_serve(args, config: dict):
-    """Lance le serveur Flask."""
+def cmd_serve(args, config: dict, t):
     try:
         from api.routes import create_app
     except ImportError as e:
-        print_err(
-            f"Module Flask manquant : {e}\n"
-            "  Créez api/routes.py ou installez Flask : pip install flask"
-        )
+        print_err(t("cli.module_missing", error=str(e)))
         sys.exit(1)
 
     db_path = Path(config["database"]["path"])
     if not db_path.exists():
-        print_err(
-            "Base de données introuvable.\n"
-            "  Lancez d'abord : python main.py sync"
-        )
+        print_err(t("cli.serve_no_db"))
         sys.exit(1)
 
     host  = args.host  or config["server"]["host"]
@@ -372,155 +344,120 @@ def cmd_serve(args, config: dict):
     debug = args.debug or config["server"]["debug"]
 
     app = create_app(config)
-
     url = f"http://{host}:{port}"
-    print_step(f"Démarrage du serveur sur {url}")
-    print(_c(f"  Ctrl+C pour arrêter\n", YELLOW))
+
+    print_step(t("cli.serve_starting", url=url))
+    print(_c(f"  {t('cli.serve_stop')}\n", YELLOW))
 
     if not getattr(args, "no_browser", False):
-        # Ouvre le navigateur après 1.2s (le temps que Flask démarre)
         Timer(1.2, webbrowser.open, args=[url]).start()
 
     try:
         app.run(host=host, port=port, debug=debug, use_reloader=debug)
     except OSError as e:
-        print_err(
-            f"Impossible de démarrer sur le port {port} : {e}\n"
-            f"  Essayez : python main.py serve --port {port + 1}"
-        )
+        print_err(t("cli.serve_port_error", port=port, error=str(e), next_port=port + 1))
         sys.exit(1)
     except KeyboardInterrupt:
-        print("\n" + _c("  Serveur arrêté.", YELLOW))
+        print("\n" + _c(f"  {t('cli.serve_stop')}.", YELLOW))
 
 
 # ---------------------------------------------------------------------------
 # Commande : reset
 # ---------------------------------------------------------------------------
-def cmd_reset(args, config: dict):
-    """Supprime la base de données et les caches (avec confirmation)."""
+def cmd_reset(args, config: dict, t):
     if not getattr(args, "confirm", False):
-        print_err(
-            "Cette commande supprime TOUTES les données synchronisées.\n"
-            "  Ajoutez --confirm pour confirmer."
-        )
+        print_err(t("cli.reset_confirm_required"))
         sys.exit(1)
 
     db_path   = Path(config["database"]["path"])
     cache_dir = Path(config["cache"]["dir"])
 
-    print_step("Reset de la base de données et des caches")
+    print_step(t("cli.reset_title"))
 
     if db_path.exists():
         db_path.unlink()
-        print_ok(f"Base supprimée : {db_path}")
+        print_ok(t("cli.reset_db_done", path=str(db_path)))
     else:
-        print_warn("Base inexistante, rien à supprimer.")
+        print_warn(t("cli.reset_no_db"))
 
     import shutil
     if cache_dir.exists():
         shutil.rmtree(cache_dir)
-        print_ok(f"Cache supprimé : {cache_dir}")
+        print_ok(t("cli.reset_cache_done", path=str(cache_dir)))
     else:
-        print_warn("Cache inexistant, rien à supprimer.")
+        print_warn(t("cli.reset_no_cache"))
 
-    print_ok("Reset terminé. Relancez 'sync' pour réinitialiser.")
+    print_ok(t("cli.reset_done"))
 
 
 # ---------------------------------------------------------------------------
-# Construction du parser CLI
+# Parser CLI
 # ---------------------------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="factorio_hub",
-        description="Factorio Modding Hub — Centralisateur de prototypes",
+        description="Factorio Modding Hub — Prototype Centralizer",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Exemples :
-  python main.py sync                         # api_docs + raw_data (défaut)
-  python main.py sync --all                   # toutes sources incl. GitHub
-  python main.py sync --source api_docs       # schéma des types uniquement
-  python main.py sync --source raw_data       # instances vanilla uniquement
-  python main.py sync --source github --version 2.0.65
-  python main.py serve                        # lance l'interface web
+Examples:
+  python main.py sync                          # api_docs + raw_data (default)
+  python main.py sync --all                    # all sources incl. GitHub
+  python main.py sync --source api_docs
+  python main.py sync --source raw_data --version 2.0.76
+  python main.py sync --source github --version 2.0.76
+  python main.py sync --source github --version 2.0.76 --force
+  python main.py serve
   python main.py serve --port 8080 --no-browser
-  python main.py status                       # état de la DB
-  python main.py reset --confirm              # remet à zéro
+  python main.py status
+  python main.py reset --confirm
         """,
     )
 
-    sub = parser.add_subparsers(dest="command", metavar="<commande>")
+    sub = parser.add_subparsers(dest="command", metavar="<command>")
 
-    # ── sync ──────────────────────────────────────────────────────────────
-    p_sync = sub.add_parser("sync", help="Synchroniser les sources de données")
+    # sync
+    p_sync = sub.add_parser("sync", help="Synchronize data sources")
     src_group = p_sync.add_mutually_exclusive_group()
     src_group.add_argument(
-        "--all",
-        action="store_true",
-        help="Synchronise toutes les sources (api_docs + raw_data + github)",
+        "--all", action="store_true",
+        help="Sync all sources (api_docs + raw_data + github)",
     )
     src_group.add_argument(
-        "--source",
-        choices=["api_docs", "raw_data", "github"],
-        metavar="SOURCE",
-        help="Source unique : api_docs | raw_data | github",
+        "--source", choices=["api_docs", "raw_data", "github"], metavar="SOURCE",
+        help="Single source: api_docs | raw_data | github",
     )
     p_sync.add_argument(
-        "--version",
-        metavar="TAG",
+        "--version", metavar="TAG",
         help=(
-            "Tag de version à utiliser. "
-            "Pour --source github : tag Git (ex: 2.0.65). "
-            "Pour --source raw_data : force la version en DB (ex: 2.0.76)."
+            "Version tag. "
+            "For --source github: Git tag (e.g. 2.0.76). "
+            "For --source raw_data: force version in DB (e.g. 2.0.76)."
         ),
     )
     p_sync.add_argument(
-        "--force",
-        action="store_true",
-        dest="force_refresh",
-        help="Force le re-téléchargement même si le cache est valide",
+        "--force", action="store_true", dest="force_refresh",
+        help="Force re-download even if cache is valid",
     )
     p_sync.add_argument(
-        "--fail-fast",
-        action="store_true",
-        help="Arrête au premier échec (par défaut : continue sur erreur)",
+        "--fail-fast", action="store_true",
+        help="Stop on first error (default: log and continue)",
     )
 
-    # ── serve ─────────────────────────────────────────────────────────────
-    p_serve = sub.add_parser("serve", help="Lancer l'interface web")
-    p_serve.add_argument(
-        "--port", "-p",
-        type=int,
-        default=None,
-        help="Port d'écoute (défaut : 5000 ou valeur dans settings.toml)",
-    )
-    p_serve.add_argument(
-        "--host",
-        default=None,
-        help="Adresse d'écoute (défaut : 127.0.0.1)",
-    )
-    p_serve.add_argument(
-        "--no-browser",
-        action="store_true",
-        help="Ne pas ouvrir le navigateur automatiquement",
-    )
-    p_serve.add_argument(
-        "--debug",
-        action="store_true",
-        help="Mode debug Flask (rechargement automatique)",
-    )
+    # serve
+    p_serve = sub.add_parser("serve", help="Start the web interface")
+    p_serve.add_argument("--port", "-p", type=int, default=None)
+    p_serve.add_argument("--host", default=None)
+    p_serve.add_argument("--no-browser", action="store_true")
+    p_serve.add_argument("--debug", action="store_true")
 
-    # ── status ────────────────────────────────────────────────────────────
-    sub.add_parser("status", help="Afficher l'état de la base de données")
+    # status
+    sub.add_parser("status", help="Show database status")
 
-    # ── reset ─────────────────────────────────────────────────────────────
-    p_reset = sub.add_parser(
-        "reset",
-        help="Supprimer la base de données et les caches",
-    )
+    # reset
+    p_reset = sub.add_parser("reset", help="Delete database and caches")
     p_reset.add_argument(
-        "--confirm",
-        action="store_true",
-        help="Confirmation obligatoire (protection contre les accidents)",
+        "--confirm", action="store_true",
+        help="Required confirmation flag",
     )
 
     return parser
@@ -530,15 +467,12 @@ Exemples :
 # Point d'entrée
 # ---------------------------------------------------------------------------
 def main():
-    configure_output_streams()
     print_header()
     config = load_config()
-        
-    from core.i18n import init_from_config, t
-    init_from_config(config)
-# 2. Exemple d'utilisation dans cmd_sync() — optionnel pour l'instant,
-#    les messages CLI seront traduits en point 4 (intégration CMD).
-#    Pour l'instant, juste s'assurer que init_from_config est appelé.
+
+    # Init i18n — doit être fait avant tout affichage traduit
+    t = _init_i18n(config)
+
     parser = build_parser()
     args   = parser.parse_args()
 
@@ -547,10 +481,10 @@ def main():
         sys.exit(0)
 
     dispatch = {
-        "sync":   lambda: cmd_sync(args, config),
-        "serve":  lambda: cmd_serve(args, config),
-        "status": lambda: cmd_status(config),
-        "reset":  lambda: cmd_reset(args, config),
+        "sync":   lambda: cmd_sync(args, config, t),
+        "serve":  lambda: cmd_serve(args, config, t),
+        "status": lambda: cmd_status(config, t),
+        "reset":  lambda: cmd_reset(args, config, t),
     }
 
     handler = dispatch.get(args.command)
