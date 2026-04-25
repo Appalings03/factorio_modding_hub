@@ -533,6 +533,12 @@ def main():
     configure_output_streams()
     print_header()
     config = load_config()
+        
+    from core.i18n import init_from_config, t
+    init_from_config(config)
+# 2. Exemple d'utilisation dans cmd_sync() — optionnel pour l'instant,
+#    les messages CLI seront traduits en point 4 (intégration CMD).
+#    Pour l'instant, juste s'assurer que init_from_config est appelé.
     parser = build_parser()
     args   = parser.parse_args()
 

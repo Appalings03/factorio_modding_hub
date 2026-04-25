@@ -18,6 +18,7 @@ from db.schema     import init_db
 from db.repository import Repository
 from core.search_engine import SearchEngine
 from core.diff_engine   import DiffEngine
+from core.i18n import init_flask, set_language, get_language, available_languages, t as _t
 
 logger = logging.getLogger("factorio_hub.routes")
 
@@ -33,6 +34,10 @@ def create_app(config: dict) -> Flask:
         static_folder=str(Path(__file__).parent.parent / "ui" / "static"),
     )
     app.secret_key = "fmh-local-secret-not-for-prod"
+    
+    from core.i18n import init_from_config, init_flask
+    init_from_config(config)
+    init_flask(app)
 
     db_path = Path(config["database"]["path"])
     init_db(db_path)
@@ -97,6 +102,26 @@ def create_app(config: dict) -> Flask:
         repo.set_latest_version(target["version_tag"])
         flash(f"Version active : {target['version_tag']}", "success")
         return redirect(url_for("index"))
+    
+    @app.route("/set-language", methods=["POST"])
+    def set_language_route():
+        """
+        Change la langue active et la persiste dans settings.toml.
+        """
+        lang = request.form.get("lang", "en").strip()
+        from core.i18n import set_language, available_languages
+        langs = [l["code"] for l in available_languages()]
+ 
+        if lang not in langs:
+            flash(f"Langue inconnue : {lang}", "error")
+            return redirect(request.referrer or url_for("index"))
+ 
+        set_language(lang)
+ 
+        # Persiste dans settings.toml
+        _persist_language(lang, config)
+ 
+        return redirect(request.referrer or url_for("index"))
 
     @app.route("/search")
     def search_page():
@@ -574,3 +599,52 @@ def _build_stats(repo, version_id, versions):
         "type_count":  type_count,
         "version_tag": version_tag,
     }
+    
+def _persist_language(lang: str, config: dict) -> None:
+    """Écrit la langue dans config/settings.toml."""
+    import tomllib as _tomllib
+    settings_path = Path(__file__).parent.parent / "config" / "settings.toml"
+ 
+    # Lit le fichier existant ou crée un dict vide
+    if settings_path.exists():
+        try:
+            import tomllib
+            with open(settings_path, "rb") as f:
+                current = tomllib.load(f)
+        except Exception:
+            current = {}
+    else:
+        current = {}
+ 
+    # Met à jour la section [ui]
+    if "ui" not in current:
+        current["ui"] = {}
+    current["ui"]["language"] = lang
+ 
+    # Réécrit en TOML (format simple, pas de lib externe nécessaire)
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_toml(settings_path, current)
+ 
+ 
+def _write_toml(path: Path, data: dict) -> None:
+    """Sérialise un dict simple en TOML (1 niveau de section)."""
+    lines = []
+    # Clés racine d'abord
+    for k, v in data.items():
+        if not isinstance(v, dict):
+            lines.append(f'{k} = {_toml_value(v)}')
+    # Sections ensuite
+    for section, values in data.items():
+        if isinstance(values, dict):
+            lines.append(f'\n[{section}]')
+            for k, v in values.items():
+                lines.append(f'{k} = {_toml_value(v)}')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+ 
+ 
+def _toml_value(v) -> str:
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, (int, float)):
+        return str(v)
+    return f'"{v}"'
