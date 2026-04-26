@@ -262,15 +262,6 @@ The official Wube repository containing the Lua source files for base prototypes
 
 ---
 
-## Phase 2 — GitHub Import & Localization
-
-In development:
-
-- **GitHub → DB import**: parsing cached Lua files and inserting prototypes into the database, making GitHub data searchable and comparable like other sources
-- **Localization**: UI available in English and French via language selector
-
----
-
 ## Phase 3 — Prototype Validator
 
 Planned feature — validate a mod prototype against the official schema before launching Factorio:
