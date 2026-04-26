@@ -9,7 +9,8 @@
     "search": "Search",
     "types": "Types",
     "status": "DB Status",
-    "search_placeholder": "Search a prototype…"
+    "search_placeholder": "Search a prototype…",
+    "mods": "Mods"
   },
 
   "footer": {
@@ -166,5 +167,16 @@
     "reset_done": "Reset complete. Run 'sync' to reinitialize.",
     "reset_confirm_required": "This command deletes ALL synchronized data.\nAdd --confirm to proceed.",
     "module_missing": "Missing module: {error}"
+  },
+  "mods": {
+    "title": "Mods — FMH",
+    "page_title": "My Mods",
+    "btn_import": "Import a mod",
+    "btn_browse": "Browse",
+    "btn_validate": "Validate",
+    "btn_compare": "Compare versions",
+    "no_mods": "No mod imported yet.",
+    "no_mods_hint": "Import a mod .zip to start.",
+    "delete_confirm": "Delete this mod and all its prototypes?"
   }
 }

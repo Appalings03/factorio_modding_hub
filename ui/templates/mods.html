@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ t('mods.title') }}{% endblock %}
+
+{% block content %}
+<div class="page-mods">
+
+  <div class="mods-header">
+    <h1 class="page-title">{{ t('mods.page_title') }}</h1>
+    <a href="{{ url_for('mods_import') }}" class="btn btn-primary">
+      ⊕ {{ t('mods.btn_import') }}
+    </a>
+  </div>
+
+  {% if mods %}
+
+    {# Grouper par nom de mod (plusieurs versions possibles) #}
+    {% set mod_names = mods | map(attribute='name') | unique | list %}
+
+    {% for mod_name in mod_names %}
+      {% set mod_versions = mods | selectattr('name', 'equalto', mod_name) | list %}
+
+      <div class="mod-group">
+        <div class="mod-group-header">
+          <h2 class="mod-group-name">{{ mod_name }}</h2>
+          {% if mod_versions[0].author %}
+            <span class="muted">par {{ mod_versions[0].author }}</span>
+          {% endif %}
+          <span class="mod-version-count muted">
+            {{ mod_versions | length }} version{% if mod_versions | length > 1 %}s{% endif %}
+          </span>
+        </div>
+
+        {% if mod_versions[0].description %}
+          <p class="mod-description muted">{{ mod_versions[0].description }}</p>
+        {% endif %}
+
+        <div class="mod-versions">
+          {% for mod in mod_versions %}
+          <div class="mod-version-card">
+            <div class="mvc-top">
+              <span class="mvc-version">v{{ mod.mod_version }}</span>
+              {% if mod.game_version %}
+                <span class="mvc-game-version muted">Factorio {{ mod.game_version }}</span>
+              {% endif %}
+              {% if mod.is_validated %}
+                <span class="mvc-validated">✓ validé</span>
+              {% else %}
+                <span class="mvc-unvalidated muted">non validé</span>
+              {% endif %}
+            </div>
+
+            <div class="mvc-stats muted">
+              {{ mod.proto_count }} prototype{% if mod.proto_count != 1 %}s{% endif %}
+              · importé {{ mod.import_date[:10] }}
+            </div>
+
+            <div class="mvc-actions">
+              <a href="{{ url_for('mods_detail', mod_id=mod.id) }}"
+                 class="btn btn-secondary btn-sm">{{ t('mods.btn_browse') }}</a>
+              <a href="{{ url_for('mods_validate', mod_id=mod.id) }}"
+                 class="btn btn-secondary btn-sm">{{ t('mods.btn_validate') }}</a>
+              {% if mod_versions | length > 1 %}
+                <a href="{{ url_for('mods_compare_select', mod_name=mod_name) }}"
+                   class="btn btn-secondary btn-sm">{{ t('mods.btn_compare') }}</a>
+              {% endif %}
+              <a href="{{ url_for('mods_delete', mod_id=mod.id) }}"
+                 class="btn btn-secondary btn-sm btn-danger"
+                 data-confirm="{{ t('mods.delete_confirm') }}">✕</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="empty-state">
+      <p>{{ t('mods.no_mods') }}</p>
+      <p class="muted">{{ t('mods.no_mods_hint') }}</p>
+      <a href="{{ url_for('mods_import') }}" class="btn btn-primary" style="margin-top:1rem">
+        ⊕ {{ t('mods.btn_import') }}
+      </a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}
