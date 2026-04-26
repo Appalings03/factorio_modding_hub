@@ -815,3 +815,101 @@ tr:hover td { background: var(--bg-panel); }
 .diff-cell-old   { color: var(--removed-text); }
 .diff-cell-new   { color: var(--added-text); }
 .diff-cell-empty { color: var(--text-muted); }
+
+/* ============================================================
+   PAGE : MODS
+   ============================================================ */
+
+.page-mods { max-width: 1000px; margin: 0 auto; }
+
+.mods-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.mod-group {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.mod-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mod-group-name {
+  font-size: 1.1rem;
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.mod-version-count {
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+.mod-description {
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.mod-versions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mod-version-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.mvc-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 180px;
+}
+
+.mvc-version {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.mvc-game-version { font-size: 0.78rem; }
+
+.mvc-validated   { color: var(--added-text);  font-size: 0.78rem; }
+.mvc-unvalidated { font-size: 0.78rem; }
+
+.mvc-stats { font-size: 0.78rem; flex: 1; }
+
+.mvc-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.btn-danger { border-color: var(--removed) !important; }
+.btn-danger:hover {
+  border-color: var(--removed-text) !important;
+  color: var(--removed-text) !important;
+}

@@ -47,7 +47,7 @@ def create_app(config: dict) -> Flask:
     diff   = DiffEngine(repo)
 
     # ------------------------------------------------------------------ #
-    # Context processor — données injectées dans tous les templates       #
+    # Context processor — données injectées dans tous les templates      #
     # ------------------------------------------------------------------ #
 
     @app.context_processor
@@ -62,7 +62,7 @@ def create_app(config: dict) -> Flask:
         }
 
     # ------------------------------------------------------------------ #
-    # Routes principales                                                   #
+    # Routes principales                                                 #
     # ------------------------------------------------------------------ #
 
     @app.route("/")
@@ -92,7 +92,6 @@ def create_app(config: dict) -> Flask:
             flash("Version invalide.", "error")
             return redirect(url_for("index"))
  
-        # Récupère le tag correspondant
         versions = repo.get_all_versions()
         target   = next((v for v in versions if v["id"] == new_vid), None)
         if not target:
@@ -118,7 +117,6 @@ def create_app(config: dict) -> Flask:
  
         set_language(lang)
  
-        # Persiste dans settings.toml
         _persist_language(lang, config)
  
         return redirect(request.referrer or url_for("index"))
@@ -151,7 +149,6 @@ def create_app(config: dict) -> Flask:
                 typenames=typenames,
             )
         else:
-            # Page d'accueil — grille enrichie
             type_cards = _build_type_cards(repo, version_id, typenames)
             return render_template(
                 "search.html",
@@ -185,7 +182,6 @@ def create_app(config: dict) -> Flask:
             type_children  = repo.get_type_children(type_info["id"])
             type_props     = repo.get_type_properties(type_info["id"])
 
-        # Propriétés du prototype enrichies avec le schéma
         raw          = prototype["raw_json"]
         schema_index = {p["name"]: p for p in type_props}
         properties   = _build_property_list(raw, schema_index)
@@ -243,9 +239,51 @@ def create_app(config: dict) -> Flask:
         from db.schema import get_db_info
         info = get_db_info(db_path)
         return render_template("status.html", info=info)
-
+    
+    @app.route("/mods")
+    def mods_page():
+        mods = repo.get_all_mods()
+        # Ajouter le comptage de prototypes pour chaque mod
+        for mod in mods:
+            mod["proto_count"] = repo.count_mod_prototypes(mod["id"])
+        return render_template("mods.html", mods=mods)
+ 
+    @app.route("/mods/<int:mod_id>/delete")
+    def mods_delete(mod_id: int):
+        mod = repo.get_mod(mod_id)
+        if not mod:
+            abort(404)
+        repo.delete_mod(mod_id)
+        flash(f"Mod '{mod['name']} v{mod['mod_version']}' supprimé.", "success")
+        return redirect(url_for("mods_page"))
+ 
+    @app.route("/mods/import")
+    def mods_import():
+        return render_template("mods_import.html")
+ 
+    @app.route("/mods/<int:mod_id>")
+    def mods_detail(mod_id: int):
+        mod = repo.get_mod(mod_id)
+        if not mod:
+            abort(404)
+        prototypes = repo.get_mod_prototypes(mod_id)
+        return render_template("mods_detail.html", mod=mod, prototypes=prototypes)
+ 
+    @app.route("/mods/<int:mod_id>/validate")
+    def mods_validate(mod_id: int):
+        mod = repo.get_mod(mod_id)
+        if not mod:
+            abort(404)
+        return render_template("mods_validate.html", mod=mod, results=None)
+ 
+    @app.route("/mods/compare/<mod_name>")
+    def mods_compare_select(mod_name: str):
+        versions = repo.get_mods_by_name(mod_name)
+        return render_template("mods_compare.html", mod_name=mod_name,
+                               versions=versions, diff=None)
+ 
     # ------------------------------------------------------------------ #
-    # Annotations                                                          #
+    # Annotations                                                        #
     # ------------------------------------------------------------------ #
 
     @app.route("/annotate", methods=["POST"])
@@ -284,7 +322,7 @@ def create_app(config: dict) -> Flask:
         abort(404)
 
     # ------------------------------------------------------------------ #
-    # API JSON (autocomplete, etc.)                                        #
+    # API JSON (autocomplete, etc.)                                      #
     # ------------------------------------------------------------------ #
 
     @app.route("/api/autocomplete")
@@ -305,7 +343,7 @@ def create_app(config: dict) -> Flask:
         return jsonify(prototype)
 
     # ------------------------------------------------------------------ #
-    # Erreurs                                                              #
+    # Erreurs                                                            #
     # ------------------------------------------------------------------ #
 
     @app.errorhandler(404)
@@ -316,7 +354,7 @@ def create_app(config: dict) -> Flask:
 
 
 # ------------------------------------------------------------------ #
-# Helpers                                                              #
+# Helpers                                                            #
 # ------------------------------------------------------------------ #
 
 # Catégories et ordre logique pour la page d'accueil
@@ -382,7 +420,6 @@ def _build_type_cards(repo, version_id: int | None, typenames: list[str]) -> lis
         return [{"typename": t, "count": 0, "description": "", "category": "Autres"}
                 for t in typenames]
 
-    # Comptage par typename
     with repo._conn() as con:
         rows = con.execute(
             "SELECT typename, COUNT(*) as cnt FROM prototypes "
@@ -391,7 +428,6 @@ def _build_type_cards(repo, version_id: int | None, typenames: list[str]) -> lis
         ).fetchall()
     counts = {r["typename"]: r["cnt"] for r in rows}
 
-    # Descriptions depuis prototype_types
     with repo._conn() as con:
         rows = con.execute(
             "SELECT typename, description FROM prototype_types "
@@ -400,7 +436,6 @@ def _build_type_cards(repo, version_id: int | None, typenames: list[str]) -> lis
         ).fetchall()
     descriptions = {r["typename"]: r["description"] for r in rows}
 
-    # Assignation des catégories
     assigned = {}
     for category, types in _TYPE_CATEGORIES.items():
         if category == "Autres":
@@ -408,12 +443,10 @@ def _build_type_cards(repo, version_id: int | None, typenames: list[str]) -> lis
         for t in types:
             assigned[t] = category
 
-    # Construction des cards groupées
     groups = {cat: [] for cat in _TYPE_CATEGORIES}
     for typename in typenames:
         category = assigned.get(typename, "Autres")
         desc = descriptions.get(typename, "")
-        # Tronque la description
         if desc and len(desc) > 80:
             desc = desc[:77] + "..."
         groups[category].append({
@@ -423,7 +456,6 @@ def _build_type_cards(repo, version_id: int | None, typenames: list[str]) -> lis
             "category":    category,
         })
 
-    # Retourne dans l'ordre des catégories
     result = []
     for category, cards in groups.items():
         if cards:
@@ -469,7 +501,6 @@ def _build_property_list(raw: dict, schema_index: dict) -> list[dict]:
     """
     properties = []
 
-    # Propriétés du schéma non présentes dans raw → affichées quand même
     schema_only_keys = set(schema_index.keys()) - set(raw.keys())
 
     for key, value in sorted(raw.items()):
@@ -489,7 +520,6 @@ def _build_property_list(raw: dict, schema_index: dict) -> list[dict]:
         }
         properties.append(prop)
 
-    # Propriétés de schéma absentes du prototype (valeurs par défaut implicites)
     for key in sorted(schema_only_keys):
         schema = schema_index[key]
         if schema.get("is_optional"):
@@ -605,7 +635,6 @@ def _persist_language(lang: str, config: dict) -> None:
     import tomllib as _tomllib
     settings_path = Path(__file__).parent.parent / "config" / "settings.toml"
  
-    # Lit le fichier existant ou crée un dict vide
     if settings_path.exists():
         try:
             import tomllib
@@ -616,12 +645,10 @@ def _persist_language(lang: str, config: dict) -> None:
     else:
         current = {}
  
-    # Met à jour la section [ui]
     if "ui" not in current:
         current["ui"] = {}
     current["ui"]["language"] = lang
  
-    # Réécrit en TOML (format simple, pas de lib externe nécessaire)
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     _write_toml(settings_path, current)
  
@@ -629,11 +656,9 @@ def _persist_language(lang: str, config: dict) -> None:
 def _write_toml(path: Path, data: dict) -> None:
     """Sérialise un dict simple en TOML (1 niveau de section)."""
     lines = []
-    # Clés racine d'abord
     for k, v in data.items():
         if not isinstance(v, dict):
             lines.append(f'{k} = {_toml_value(v)}')
-    # Sections ensuite
     for section, values in data.items():
         if isinstance(values, dict):
             lines.append(f'\n[{section}]')

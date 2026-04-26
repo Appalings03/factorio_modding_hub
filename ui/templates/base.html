@@ -22,6 +22,10 @@
         <a href="{{ url_for('index') }}#types" class="nav-link">
           {{ t('nav.types') }}
         </a>
+        <a href="{{ url_for('mods_page') }}"
+           class="nav-link {% if request.endpoint and request.endpoint.startswith('mods') %}active{% endif %}">
+          {{ t('nav.mods') }}
+        </a>
         <a href="{{ url_for('status_page') }}"
            class="nav-link {% if request.endpoint == 'status_page' %}active{% endif %}">
           {{ t('nav.status') }}

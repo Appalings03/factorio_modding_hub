@@ -51,7 +51,7 @@ class Repository:
         pass
 
     # ------------------------------------------------------------------ #
-    # VERSIONS                                                             #
+    # VERSIONS                                                           #
     # ------------------------------------------------------------------ #
 
     def upsert_version(self, version_tag: str, source: str) -> int:
@@ -108,7 +108,7 @@ class Repository:
             return row["version_tag"] if row else None
 
     # ------------------------------------------------------------------ #
-    # PROTOTYPE TYPES                                                      #
+    # PROTOTYPE TYPES                                                    #
     # ------------------------------------------------------------------ #
 
     def upsert_prototype_type(self, version_id: int, data: dict) -> int:
@@ -213,7 +213,7 @@ class Repository:
             return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------ #
-    # TYPE PROPERTIES                                                      #
+    # TYPE PROPERTIES                                                    #
     # ------------------------------------------------------------------ #
 
     def upsert_type_properties(self, type_id: int, properties: list[dict]) -> None:
@@ -263,7 +263,7 @@ class Repository:
             return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------ #
-    # PROTOTYPES                                                           #
+    # PROTOTYPES                                                         #
     # ------------------------------------------------------------------ #
 
     def upsert_prototype(
@@ -359,7 +359,7 @@ class Repository:
             ).fetchone()[0]
 
     # ------------------------------------------------------------------ #
-    # PROTOTYPE PROPERTIES                                                 #
+    # PROTOTYPE PROPERTIES                                               #
     # ------------------------------------------------------------------ #
 
     def rebuild_properties_flat(self, version_id: int) -> None:
@@ -408,7 +408,7 @@ class Repository:
             return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------ #
-    # RELATIONS                                                            #
+    # RELATIONS                                                          #
     # ------------------------------------------------------------------ #
 
     def extract_relations(self, version_id: int) -> None:
@@ -500,7 +500,7 @@ class Repository:
             return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------ #
-    # SEARCH                                                               #
+    # SEARCH                                                             #
     # ------------------------------------------------------------------ #
 
     def search_prototypes(
@@ -558,7 +558,7 @@ class Repository:
             return [r["typename"] for r in rows]
 
     # ------------------------------------------------------------------ #
-    # ANNOTATIONS                                                          #
+    # ANNOTATIONS                                                        #
     # ------------------------------------------------------------------ #
 
     def upsert_annotation(
@@ -624,9 +624,151 @@ class Repository:
     def delete_annotation(self, annotation_id: int) -> None:
         with self._conn() as con:
             con.execute("DELETE FROM annotations WHERE id = ?", (annotation_id,))
+    
+    # ------------------------------------------------------------------ #
+    # MODS                                                               #
+    # ------------------------------------------------------------------ #
+ 
+    def create_mod(self, name: str, mod_version: str, game_version: str = None,
+                   file_name: str = None, description: str = None,
+                   author: str = None) -> int:
+        """
+        Crée un mod en DB. Retourne son id.
+        Si le mod existe déjà (name + mod_version), retourne l'id existant.
+        """
+        with self._conn() as con:
+            existing = con.execute(
+                "SELECT id FROM mods WHERE name = ? AND mod_version = ?",
+                (name, mod_version),
+            ).fetchone()
+            if existing:
+                return existing["id"]
+ 
+            cur = con.execute(
+                """
+                INSERT INTO mods(name, mod_version, game_version, file_name,
+                                 description, author, import_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (name, mod_version, game_version, file_name,
+                 description, author, _now()),
+            )
+            return cur.lastrowid
+ 
+    def get_mod(self, mod_id: int) -> dict | None:
+        with self._conn() as con:
+            row = con.execute(
+                "SELECT * FROM mods WHERE id = ?", (mod_id,)
+            ).fetchone()
+            return dict(row) if row else None
+ 
+    def get_mod_by_name_version(self, name: str, mod_version: str) -> dict | None:
+        with self._conn() as con:
+            row = con.execute(
+                "SELECT * FROM mods WHERE name = ? AND mod_version = ?",
+                (name, mod_version),
+            ).fetchone()
+            return dict(row) if row else None
+ 
+    def get_all_mods(self) -> list[dict]:
+        with self._conn() as con:
+            rows = con.execute(
+                "SELECT * FROM mods ORDER BY name, mod_version DESC"
+            ).fetchall()
+            return [dict(r) for r in rows]
+ 
+    def get_mods_by_name(self, name: str) -> list[dict]:
+        """Retourne toutes les versions d'un mod donné."""
+        with self._conn() as con:
+            rows = con.execute(
+                "SELECT * FROM mods WHERE name = ? ORDER BY mod_version DESC",
+                (name,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+ 
+    def delete_mod(self, mod_id: int) -> None:
+        """Supprime le mod et tous ses prototypes (CASCADE)."""
+        with self._conn() as con:
+            # Récupère la version DB associée pour la supprimer aussi
+            mod = con.execute(
+                "SELECT name, mod_version FROM mods WHERE id = ?", (mod_id,)
+            ).fetchone()
+            if mod:
+                version_tag = f"mod:{mod['name']}:{mod['mod_version']}"
+                con.execute(
+                    "DELETE FROM versions WHERE version_tag = ?", (version_tag,)
+                )
+            con.execute("DELETE FROM mods WHERE id = ?", (mod_id,))
+ 
+    def mark_mod_validated(self, mod_id: int) -> None:
+        with self._conn() as con:
+            con.execute(
+                "UPDATE mods SET is_validated = 1, validation_date = ? WHERE id = ?",
+                (_now(), mod_id),
+            )
+ 
+    def get_mod_prototypes(self, mod_id: int, limit: int = 200,
+                           offset: int = 0) -> list[dict]:
+        """Retourne les prototypes d'un mod spécifique."""
+        with self._conn() as con:
+            rows = con.execute(
+                "SELECT id, name, typename, localised_name, order_key, subgroup "
+                "FROM prototypes WHERE mod_id = ? "
+                "ORDER BY typename, name LIMIT ? OFFSET ?",
+                (mod_id, limit, offset),
+            ).fetchall()
+            return [dict(r) for r in rows]
+ 
+    def count_mod_prototypes(self, mod_id: int) -> int:
+        with self._conn() as con:
+            return con.execute(
+                "SELECT COUNT(*) FROM prototypes WHERE mod_id = ?", (mod_id,)
+            ).fetchone()[0]
+ 
+    def upsert_mod_prototype(self, mod_id: int, version_id: int,
+                             typename: str, name: str, data: dict) -> int:
+        """
+        Insère un prototype de mod en DB.
+        Similaire à upsert_prototype mais avec mod_id.
+        """
+        with self._conn() as con:
+            type_row = con.execute(
+                "SELECT id FROM prototype_types "
+                "WHERE typename = ? AND version_id = ?",
+                (typename, version_id),
+            ).fetchone()
+            type_id = type_row["id"] if type_row else None
+ 
+            cur = con.execute(
+                """
+                INSERT INTO prototypes
+                    (version_id, type_id, typename, name, raw_json,
+                     localised_name, order_key, subgroup, mod_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(typename, name, version_id) DO UPDATE SET
+                    raw_json       = excluded.raw_json,
+                    type_id        = excluded.type_id,
+                    localised_name = excluded.localised_name,
+                    order_key      = excluded.order_key,
+                    subgroup       = excluded.subgroup,
+                    mod_id         = excluded.mod_id
+                """,
+                (
+                    version_id,
+                    type_id,
+                    typename,
+                    name,
+                    json.dumps(data, ensure_ascii=False),
+                    _extract_localised_name(data),
+                    data.get("order"),
+                    data.get("subgroup"),
+                    mod_id,
+                ),
+            )
+            return cur.lastrowid
 
     # ------------------------------------------------------------------ #
-    # DIFF (support pour diff_engine.py)                                  #
+    # DIFF (support pour diff_engine.py)                                 #
     # ------------------------------------------------------------------ #
 
     def get_prototype_raw(
@@ -650,7 +792,7 @@ class Repository:
 
 
 # ------------------------------------------------------------------ #
-# Helpers privés                                                       #
+# Helpers privés                                                     #
 # ------------------------------------------------------------------ #
 
 def _type_str(type_info: Any) -> str:
@@ -706,7 +848,6 @@ def _flatten_json(
         if isinstance(v, dict) and max_depth > 1:
             yield from _flatten_json(v, full_key, max_depth - 1)
         elif isinstance(v, list):
-            # On ne descend pas dans les listes — trop verbeux
             yield full_key, json.dumps(v, ensure_ascii=False)
         else:
             yield full_key, v
@@ -721,6 +862,5 @@ def _extract_localised_name(data: dict) -> str | None:
     if isinstance(ln, str):
         return ln
     if isinstance(ln, list) and ln:
-        # Format Lua : {"item-name.iron-plate"} → on prend la clé
         return str(ln[0])
     return None
