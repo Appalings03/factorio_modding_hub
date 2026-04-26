@@ -220,14 +220,6 @@ Fichiers Lua officiels des prototypes de base, tagués par version. Source de v�
 
 ---
 
-## Phase 2 — Import GitHub & Localisation
-
-En développement :
-- **Import GitHub → DB** : parsing des fichiers Lua cachés et insertion en base
-- **Localisation** : interface disponible en français et en anglais
-
----
-
 ## Phase 3 — Vérificateur de prototype
 
 Prévu :
