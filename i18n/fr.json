@@ -200,6 +200,23 @@
     "merged": "fusionné",
     "new_proto": "nouveau",
     "validated": "validé",
-    "by": "par"
+    "by": "par",
+    "validate_title": "Valider",
+    "validate_version_label": "Version Factorio à valider contre",
+    "validate_no_version": "Veuillez sélectionner une version Factorio.",
+    "val_total": "total",
+    "val_ok": "valides",
+    "val_warnings": "avertissements",
+    "val_errors": "erreurs",
+    "val_unknown": "type inconnu",
+    "val_valid_pct": "valides",
+    "val_no_schema": "type absent du schéma",
+    "val_col_severity": "Sévérité",
+    "val_col_property": "Propriété",
+    "val_col_message": "Message",
+    "val_col_expected": "Attendu",
+    "val_save_hint": "Satisfait de ce prototype ? Enregistrez-le définitivement.",
+    "val_btn_save": "Enregistrer définitivement",
+    "val_saved": "Mod '{name} v{version}' enregistré."
   }
 }
