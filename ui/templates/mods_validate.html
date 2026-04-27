@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}{{ t('mods.validate_title') }} — {{ mod.name }} v{{ mod.mod_version }}{% endblock %}
+
+{% block content %}
+<div class="page-validate">
+
+  <nav class="breadcrumb">
+    <a href="{{ url_for('mods_page') }}">{{ t('mods.page_title') }}</a>
+    <span class="bc-sep">›</span>
+    <a href="{{ url_for('mods_detail', mod_id=mod.id) }}">
+      {{ mod.name }} v{{ mod.mod_version }}
+    </a>
+    <span class="bc-sep">›</span>
+    <span>{{ t('mods.validate_title') }}</span>
+  </nav>
+
+  <div class="validate-header">
+    <h1 class="page-title">
+      {{ t('mods.validate_title') }}
+      <span class="muted">— {{ mod.name }} v{{ mod.mod_version }}</span>
+    </h1>
+
+    {% if not results %}
+    {# Formulaire de lancement #}
+    <form action="{{ url_for('mods_validate', mod_id=mod.id) }}" method="post"
+          class="validate-launch-form">
+      <label class="form-label">{{ t('mods.validate_version_label') }}</label>
+      <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+        <select name="game_version" class="filter-select">
+          {% for ver in versions %}
+            <option value="{{ ver.version_tag }}"
+                    {% if ver.version_tag == mod.game_version %}selected{% endif %}>
+              {{ ver.version_tag }}{% if ver.is_latest %} ★{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">
+          ⟳ {{ t('mods.btn_validate') }}
+        </button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if results %}
+
+  {# ── Résumé global ── #}
+  <div class="validate-summary">
+    <div class="vs-pill vs-total">
+      <span class="vs-num">{{ summary.total }}</span>
+      <span class="vs-label">{{ t('mods.val_total') }}</span>
+    </div>
+    <div class="vs-pill vs-ok">
+      <span class="vs-num">{{ summary.ok }}</span>
+      <span class="vs-label">{{ t('mods.val_ok') }}</span>
+    </div>
+    <div class="vs-pill vs-warn">
+      <span class="vs-num">{{ summary.warnings }}</span>
+      <span class="vs-label">{{ t('mods.val_warnings') }}</span>
+    </div>
+    <div class="vs-pill vs-error">
+      <span class="vs-num">{{ summary.errors }}</span>
+      <span class="vs-label">{{ t('mods.val_errors') }}</span>
+    </div>
+    {% if summary.unknown %}
+    <div class="vs-pill vs-unknown">
+      <span class="vs-num">{{ summary.unknown }}</span>
+      <span class="vs-label">{{ t('mods.val_unknown') }}</span>
+    </div>
+    {% endif %}
+    <div class="vs-pill vs-pct">
+      <span class="vs-num">{{ summary.valid_pct }}%</span>
+      <span class="vs-label">{{ t('mods.val_valid_pct') }}</span>
+    </div>
+  </div>
+
+  {# ── Filtres ── #}
+  <div class="validate-filters">
+    <label class="toggle-label">
+      <input type="checkbox" class="val-filter" data-status="error" checked>
+      <span class="badge-removed">✗ {{ t('mods.val_errors') }}</span>
+    </label>
+    <label class="toggle-label">
+      <input type="checkbox" class="val-filter" data-status="warning" checked>
+      <span class="badge-modified">⚠ {{ t('mods.val_warnings') }}</span>
+    </label>
+    <label class="toggle-label">
+      <input type="checkbox" class="val-filter" data-status="ok">
+      <span class="badge-added">✓ {{ t('mods.val_ok') }}</span>
+    </label>
+    <label class="toggle-label">
+      <input type="checkbox" class="val-filter" data-status="unknown">
+      <span class="muted">? {{ t('mods.val_unknown') }}</span>
+    </label>
+    <input type="text" id="val-search" class="filter-input"
+           placeholder="{{ t('mods.filter_placeholder') }}"
+           style="max-width:220px">
+  </div>
+
+  {# ── Table des résultats ── #}
+  <div class="validate-results" id="validate-results">
+    {% for result in results %}
+    <div class="val-proto" data-status="{{ result.status }}"
+         data-name="{{ result.name }}">
+
+      <div class="val-proto-header">
+        <span class="val-status-icon
+          {% if result.status == 'ok' %}val-ok
+          {% elif result.status == 'error' %}val-error
+          {% elif result.status == 'warning' %}val-warn
+          {% else %}val-unknown{% endif %}">
+          {% if result.status == 'ok' %}✓
+          {% elif result.status == 'error' %}✗
+          {% elif result.status == 'warning' %}⚠
+          {% else %}?{% endif %}
+        </span>
+        <code class="val-proto-name">{{ result.typename }}/{{ result.name }}</code>
+        {% if not result.schema_found %}
+          <span class="muted" style="font-size:0.78rem">{{ t('mods.val_no_schema') }}</span>
+        {% endif %}
+        <span class="val-issue-counts">
+          {% if result.error_count %}
+            <span class="badge-removed">{{ result.error_count }} err</span>
+          {% endif %}
+          {% if result.warning_count %}
+            <span class="badge-modified">{{ result.warning_count }} warn</span>
+          {% endif %}
+        </span>
+        {% if result.issues %}
+        <button class="val-toggle btn btn-secondary btn-sm" onclick="toggleIssues(this)">
+          ▼
+        </button>
+        {% endif %}
+      </div>
+
+      {% if result.issues %}
+      <div class="val-issues">
+        <table class="val-issues-table">
+          <thead>
+            <tr>
+              <th style="width:80px">{{ t('mods.val_col_severity') }}</th>
+              <th style="width:200px">{{ t('mods.val_col_property') }}</th>
+              <th>{{ t('mods.val_col_message') }}</th>
+              <th style="width:140px">{{ t('mods.val_col_expected') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for issue in result.issues %}
+            <tr class="val-issue-row val-issue-{{ issue.severity }}">
+              <td>
+                <span class="val-sev-badge val-sev-{{ issue.severity }}">
+                  {{ issue.severity }}
+                </span>
+              </td>
+              <td><code>{{ issue.property_path or '—' }}</code></td>
+              <td>
+                {{ issue.message }}
+                {% if issue.inherited_from %}
+                  <span class="inherited-badge" title="Hérité de {{ issue.inherited_from }}">
+                    ↑ {{ issue.inherited_from }}
+                  </span>
+                {% endif %}
+              </td>
+              <td class="muted">
+                {% if issue.expected %}<code>{{ issue.expected }}</code>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Bouton enregistrer ── #}
+  <div class="validate-save-bar" id="save-bar">
+    <p class="muted">{{ t('mods.val_save_hint') }}</p>
+    <form action="{{ url_for('mods_save_permanent', mod_id=mod.id) }}" method="post">
+      <button type="submit" class="btn btn-primary">
+        ✓ {{ t('mods.val_btn_save') }}
+      </button>
+      <a href="{{ url_for('mods_page') }}" class="btn btn-secondary">
+        {{ t('mods.btn_back') }}
+      </a>
+    </form>
+  </div>
+
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle issues d'un prototype
+function toggleIssues(btn) {
+  const proto  = btn.closest('.val-proto');
+  const issues = proto.querySelector('.val-issues');
+  if (!issues) return;
+  const open = issues.style.display !== 'none';
+  issues.style.display = open ? 'none' : '';
+  btn.textContent = open ? '▼' : '▲';
+}
+
+// Ouvrir auto les protos avec erreurs
+document.querySelectorAll('.val-proto').forEach(proto => {
+  const issues = proto.querySelector('.val-issues');
+  if (!issues) return;
+  const hasError = proto.dataset.status === 'error';
+  issues.style.display = hasError ? '' : 'none';
+  const btn = proto.querySelector('.val-toggle');
+  if (btn) btn.textContent = hasError ? '▲' : '▼';
+});
+
+// Filtres par statut
+document.querySelectorAll('.val-filter').forEach(cb => {
+  cb.addEventListener('change', applyFilters);
+});
+document.getElementById('val-search')?.addEventListener('input', applyFilters);
+
+function applyFilters() {
+  const activeStatuses = new Set(
+    [...document.querySelectorAll('.val-filter:checked')].map(c => c.dataset.status)
+  );
+  const q = (document.getElementById('val-search')?.value || '').toLowerCase();
+
+  document.querySelectorAll('.val-proto').forEach(proto => {
+    const statusOk = activeStatuses.has(proto.dataset.status);
+    const nameOk   = !q || proto.dataset.name.toLowerCase().includes(q);
+    proto.style.display = (statusOk && nameOk) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}
