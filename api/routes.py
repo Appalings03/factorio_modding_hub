@@ -450,11 +450,82 @@ def create_app(config: dict) -> Flask:
         )
         return redirect(url_for("mods_detail", mod_id=mod_id))
  
+    # ------------------------------------------------------------------ #
+    # MODS — comparaison inter-versions                                    #
+    # ------------------------------------------------------------------ #
+ 
     @app.route("/mods/compare/<mod_name>")
     def mods_compare_select(mod_name: str):
-        versions = repo.get_mods_by_name(mod_name)
-        return render_template("mods_compare.html", mod_name=mod_name,
-                               versions=versions, diff=None)
+        """Page de sélection des versions à comparer."""
+        versions  = repo.get_mods_by_name(mod_name)
+        typenames = []
+ 
+        # Collecter tous les typenames des versions de ce mod
+        for ver in versions:
+            vid = repo.get_version_id(f"mod:{mod_name}:{ver['mod_version']}")
+            if vid:
+                for tn in repo.list_typenames(vid):
+                    if tn not in typenames:
+                        typenames.append(tn)
+        typenames.sort()
+ 
+        return render_template(
+            "mods_compare.html",
+            mod_name=mod_name,
+            versions=versions,
+            typenames=typenames,
+            version_a=None,
+            version_b=None,
+            current_typename=None,
+            diff_summary=None,
+            diffs=None,
+        )
+ 
+    @app.route("/mods/compare/<mod_name>/diff")
+    def mods_compare_do(mod_name: str):
+        """Calcule et affiche le diff entre deux versions d'un mod."""
+        version_a        = request.args.get("va", "").strip()
+        version_b        = request.args.get("vb", "").strip()
+        current_typename = request.args.get("typename", "").strip() or None
+ 
+        versions  = repo.get_mods_by_name(mod_name)
+        typenames = []
+        for ver in versions:
+            vid = repo.get_version_id(f"mod:{mod_name}:{ver['mod_version']}")
+            if vid:
+                for tn in repo.list_typenames(vid):
+                    if tn not in typenames:
+                        typenames.append(tn)
+        typenames.sort()
+ 
+        diff_summary = None
+        diffs        = []
+ 
+        if version_a and version_b and version_a != version_b:
+            tag_a = f"mod:{mod_name}:{version_a}"
+            tag_b = f"mod:{mod_name}:{version_b}"
+            vid_a = repo.get_version_id(tag_a)
+            vid_b = repo.get_version_id(tag_b)
+ 
+            if vid_a and vid_b:
+                diffs, diff_summary = _compute_mod_diff(
+                    repo, diff,
+                    vid_a, vid_b,
+                    version_a, version_b,
+                    current_typename,
+                )
+ 
+        return render_template(
+            "mods_compare.html",
+            mod_name=mod_name,
+            versions=versions,
+            typenames=typenames,
+            version_a=version_a,
+            version_b=version_b,
+            current_typename=current_typename,
+            diff_summary=diff_summary,
+            diffs=diffs,
+        )
  
     # ------------------------------------------------------------------ #
     # Annotations                                                        #
@@ -852,3 +923,91 @@ def _get_mod_version_id(mod: dict, repo) -> int | None:
     """Retourne le version_id DB associé à un mod."""
     version_tag = f"mod:{mod['name']}:{mod['mod_version']}"
     return repo.get_version_id(version_tag)
+ 
+def _compute_mod_diff(
+    repo, diff_engine,
+    vid_a: int, vid_b: int,
+    version_a: str, version_b: str,
+    typename_filter: str | None,
+) -> tuple[list[dict], dict]:
+    """
+    Compare tous les prototypes entre deux versions d'un mod.
+    Retourne (diffs, summary).
+    """
+    # Prototypes de chaque version
+    with repo._conn() as con:
+        q_filter = "AND typename = ?" if typename_filter else ""
+ 
+        def get_names(vid):
+            params = [vid]
+            if typename_filter:
+                params.append(typename_filter)
+            rows = con.execute(
+                f"SELECT typename, name FROM prototypes "
+                f"WHERE version_id = ? {q_filter} ORDER BY typename, name",
+                params,
+            ).fetchall()
+            return {(r["typename"], r["name"]) for r in rows}
+ 
+        protos_a = get_names(vid_a)
+        protos_b = get_names(vid_b)
+ 
+    added_keys   = protos_b - protos_a
+    removed_keys = protos_a - protos_b
+    common_keys  = protos_a & protos_b
+ 
+    diffs = []
+ 
+    # Prototypes ajoutés
+    for typename, name in sorted(added_keys):
+        diffs.append({
+            "change_type": "added",
+            "typename":    typename,
+            "name":        name,
+            "summary":     f"Nouveau dans v{version_b}",
+            "added":       [],
+            "removed":     [],
+            "modified":    [],
+        })
+ 
+    # Prototypes supprimés
+    for typename, name in sorted(removed_keys):
+        diffs.append({
+            "change_type": "removed",
+            "typename":    typename,
+            "name":        name,
+            "summary":     f"Supprimé dans v{version_b}",
+            "added":       [],
+            "removed":     [],
+            "modified":    [],
+        })
+ 
+    # Prototypes communs — diff des propriétés
+    for typename, name in sorted(common_keys):
+        tag_a = f"mod_version_a_{vid_a}"  # clés internes pour diff_engine
+        tag_b = f"mod_version_b_{vid_b}"
+ 
+        raw_diff = diff_engine.diff_prototype(typename, name, version_a, version_b)
+        d = diff_engine.to_dict(raw_diff)
+ 
+        if not raw_diff.has_changes:
+            continue
+ 
+        diffs.append({
+            "change_type": "modified",
+            "typename":    typename,
+            "name":        name,
+            "summary":     d["summary"],
+            "added":       d["added"],
+            "removed":     d["removed"],
+            "modified":    d["modified"],
+        })
+ 
+    summary = {
+        "added":     len(added_keys),
+        "removed":   len(removed_keys),
+        "modified":  sum(1 for d in diffs if d["change_type"] == "modified"),
+        "unchanged": len(common_keys) - sum(1 for d in diffs if d["change_type"] == "modified"),
+    }
+ 
+    return diffs, summary

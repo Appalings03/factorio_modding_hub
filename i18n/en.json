@@ -217,6 +217,12 @@
     "val_col_expected": "Expected",
     "val_save_hint": "Satisfied with this prototype? Save it permanently.",
     "val_btn_save": "Save permanently",
-    "val_saved": "Mod '{name} v{version}' saved."
+    "val_saved": "Mod '{name} v{version}' saved.",
+    "compare_title": "Compare versions",
+    "compare_need_two": "You need at least two imported versions of this mod to compare.",
+    "compare_added": "added",
+    "compare_removed": "removed",
+    "compare_modified": "modified",
+    "compare_unchanged": "unchanged"
   }
 }

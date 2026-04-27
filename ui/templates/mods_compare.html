@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}{{ t('mods.compare_title') }} — {{ mod_name }}{% endblock %}
+
+{% block content %}
+<div class="page-compare">
+
+  <nav class="breadcrumb">
+    <a href="{{ url_for('mods_page') }}">{{ t('mods.page_title') }}</a>
+    <span class="bc-sep">›</span>
+    <span>{{ mod_name }}</span>
+    <span class="bc-sep">›</span>
+    <span>{{ t('mods.compare_title') }}</span>
+  </nav>
+
+  <h1 class="page-title">
+    {{ t('mods.compare_title') }}
+    <span class="muted">— {{ mod_name }}</span>
+  </h1>
+
+  {% if versions | length < 2 %}
+  <div class="flash flash-info">
+    {{ t('mods.compare_need_two') }}
+  </div>
+  <a href="{{ url_for('mods_page') }}" class="btn btn-secondary">
+    {{ t('mods.btn_back') }}
+  </a>
+
+  {% else %}
+
+  {# ── Formulaire de sélection ── #}
+  <form class="compare-form" action="{{ url_for('mods_compare_do', mod_name=mod_name) }}"
+        method="get">
+    <div class="compare-selectors">
+
+      <div class="compare-col">
+        <label class="form-label">
+          {{ t('compare.version_a') }} <span class="muted">{{ t('compare.version_a_hint') }}</span>
+        </label>
+        <select name="va" class="filter-select">
+          {% for ver in versions %}
+            <option value="{{ ver.mod_version }}"
+                    {% if ver.mod_version == version_a %}selected{% endif %}>
+              v{{ ver.mod_version }}
+              {% if ver.game_version %}(Factorio {{ ver.game_version }}){% endif %}
+              · {{ ver.import_date[:10] }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="compare-col">
+        <label class="form-label">
+          {{ t('compare.version_b') }} <span class="muted">{{ t('compare.version_b_hint') }}</span>
+        </label>
+        <select name="vb" class="filter-select">
+          {% for ver in versions %}
+            <option value="{{ ver.mod_version }}"
+                    {% if ver.mod_version == version_b %}selected{% endif %}>
+              v{{ ver.mod_version }}
+              {% if ver.game_version %}(Factorio {{ ver.game_version }}){% endif %}
+              · {{ ver.import_date[:10] }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Filtre optionnel par typename #}
+      <div class="compare-col">
+        <label class="form-label">Type</label>
+        <select name="typename" class="filter-select">
+          <option value="">{{ t('search.all_types') }}</option>
+          {% for tn in typenames %}
+            <option value="{{ tn }}" {% if tn == current_typename %}selected{% endif %}>
+              {{ tn }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">{{ t('compare.btn_compare') }}</button>
+    </div>
+  </form>
+
+  {% if diff_summary %}
+  {# ── Résumé global ── #}
+  <div class="mod-compare-summary">
+    <div class="stat-pill">
+      <span class="stat-num">{{ diff_summary.added }}</span>
+      <span class="stat-label badge-added">{{ t('mods.compare_added') }}</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-num">{{ diff_summary.removed }}</span>
+      <span class="stat-label badge-removed">{{ t('mods.compare_removed') }}</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-num">{{ diff_summary.modified }}</span>
+      <span class="stat-label badge-modified">{{ t('mods.compare_modified') }}</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-num">{{ diff_summary.unchanged }}</span>
+      <span class="stat-label muted">{{ t('mods.compare_unchanged') }}</span>
+    </div>
+  </div>
+
+  {% if diffs %}
+  {# ── Filtres d'affichage ── #}
+  <div class="diff-filters" style="margin-bottom:1rem">
+    <label class="toggle-label">
+      <input type="checkbox" class="diff-proto-filter" data-change="added" checked>
+      <span class="badge-added">+ {{ t('mods.compare_added') }}</span>
+    </label>
+    <label class="toggle-label">
+      <input type="checkbox" class="diff-proto-filter" data-change="removed" checked>
+      <span class="badge-removed">− {{ t('mods.compare_removed') }}</span>
+    </label>
+    <label class="toggle-label">
+      <input type="checkbox" class="diff-proto-filter" data-change="modified" checked>
+      <span class="badge-modified">~ {{ t('mods.compare_modified') }}</span>
+    </label>
+    <input type="text" id="proto-diff-search" class="filter-input"
+           placeholder="{{ t('mods.filter_placeholder') }}"
+           style="max-width:220px">
+  </div>
+
+  {# ── Liste des prototypes changés ── #}
+  <div id="proto-diffs">
+    {% for d in diffs %}
+    <div class="proto-diff-block"
+         data-change="{{ d.change_type }}"
+         data-name="{{ d.name }}">
+
+      <div class="proto-diff-header">
+        <span class="proto-diff-icon
+          {% if d.change_type == 'added' %}badge-added
+          {% elif d.change_type == 'removed' %}badge-removed
+          {% else %}badge-modified{% endif %}">
+          {% if d.change_type == 'added' %}+
+          {% elif d.change_type == 'removed' %}−
+          {% else %}~{% endif %}
+        </span>
+        <code class="proto-diff-name">{{ d.typename }}/{{ d.name }}</code>
+        <span class="proto-diff-summary muted">{{ d.summary }}</span>
+        {% if d.change_type == 'modified' %}
+        <button class="val-toggle btn btn-secondary btn-sm"
+                onclick="toggleDiffDetail(this)">▼</button>
+        {% endif %}
+      </div>
+
+      {# Détail des propriétés modifiées #}
+      {% if d.change_type == 'modified' and (d.added or d.removed or d.modified) %}
+      <div class="proto-diff-detail" style="display:none">
+        <table class="diff-table">
+          <thead>
+            <tr>
+              <th class="diff-th-key">{{ t('compare.col_property') }}</th>
+              <th class="diff-th-val">v{{ version_a }}</th>
+              <th class="diff-th-val">v{{ version_b }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for change in d.added %}
+            <tr class="diff-row diff-added">
+              <td class="diff-key"><code>{{ change.key }}</code></td>
+              <td class="diff-cell diff-cell-empty">—</td>
+              <td class="diff-cell diff-cell-new">{{ change.to }}</td>
+            </tr>
+            {% endfor %}
+            {% for change in d.removed %}
+            <tr class="diff-row diff-removed">
+              <td class="diff-key"><code>{{ change.key }}</code></td>
+              <td class="diff-cell diff-cell-old">{{ change.value }}</td>
+              <td class="diff-cell diff-cell-empty">—</td>
+            </tr>
+            {% endfor %}
+            {% for change in d.modified %}
+            <tr class="diff-row diff-modified">
+              <td class="diff-key"><code>{{ change.key }}</code></td>
+              <td class="diff-cell diff-cell-old">{{ change.from }}</td>
+              <td class="diff-cell diff-cell-new">{{ change.to }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <p>{{ t('compare.no_changes') }}</p>
+  </div>
+  {% endif %}
+
+  {% endif %} {# diff_summary #}
+  {% endif %} {# versions >= 2 #}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleDiffDetail(btn) {
+  const block  = btn.closest('.proto-diff-block');
+  const detail = block.querySelector('.proto-diff-detail');
+  if (!detail) return;
+  const open = detail.style.display !== 'none';
+  detail.style.display = open ? 'none' : '';
+  btn.textContent = open ? '▼' : '▲';
+}
+
+// Filtres
+document.querySelectorAll('.diff-proto-filter').forEach(cb => {
+  cb.addEventListener('change', applyProtoFilters);
+});
+document.getElementById('proto-diff-search')?.addEventListener('input', applyProtoFilters);
+
+function applyProtoFilters() {
+  const active = new Set(
+    [...document.querySelectorAll('.diff-proto-filter:checked')].map(c => c.dataset.change)
+  );
+  const q = (document.getElementById('proto-diff-search')?.value || '').toLowerCase();
+  document.querySelectorAll('.proto-diff-block').forEach(block => {
+    const changeOk = active.has(block.dataset.change);
+    const nameOk   = !q || block.dataset.name.toLowerCase().includes(q);
+    block.style.display = (changeOk && nameOk) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

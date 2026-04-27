@@ -1169,3 +1169,53 @@ tr:hover td { background: var(--bg-panel); }
   flex-wrap: wrap;
 }
 .validate-save-bar form { display: flex; gap: 0.5rem; }
+
+/* ============================================================
+   PAGE : MODS COMPARE
+   ============================================================ */
+ 
+.mod-compare-summary {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+ 
+.proto-diff-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.4rem;
+  overflow: hidden;
+}
+ 
+.proto-diff-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.85rem;
+  flex-wrap: wrap;
+}
+ 
+.proto-diff-icon {
+  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-weight: bold;
+  width: 1.2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+ 
+.proto-diff-name {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+ 
+.proto-diff-summary {
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+ 
+.proto-diff-detail {
+  border-top: 1px solid var(--border-soft);
+}

@@ -217,6 +217,12 @@
     "val_col_expected": "Attendu",
     "val_save_hint": "Satisfait de ce prototype ? Enregistrez-le définitivement.",
     "val_btn_save": "Enregistrer définitivement",
-    "val_saved": "Mod '{name} v{version}' enregistré."
+    "val_saved": "Mod '{name} v{version}' enregistré.",
+    "compare_title": "Comparer les versions",
+    "compare_need_two": "Il faut au moins deux versions importées de ce mod pour comparer.",
+    "compare_added": "ajoutés",
+    "compare_removed": "supprimés",
+    "compare_modified": "modifiés",
+    "compare_unchanged": "inchangés"
   }
 }
