@@ -20,7 +20,6 @@
   - [reset](#reset--wipe-everything)
 - [Project Architecture](#project-architecture)
 - [Data Sources](#data-sources)
-- [Phase 2 — GitHub Import & Localization](#phase-2--github-import--localization)
 - [Phase 3 — Prototype Validator](#phase-3--prototype-validator)
 - [FAQ](#faq)
 
