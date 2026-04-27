@@ -18,7 +18,6 @@
   - [reset](#reset--remise-à-zéro)
 - [Architecture du projet](#architecture-du-projet)
 - [Sources de données](#sources-de-données)
-- [Phase 2 — Import GitHub & Localisation](#phase-2--import-github--localisation)
 - [Phase 3 — Vérificateur de prototype](#phase-3--vérificateur-de-prototype)
 - [FAQ](#faq)
 
