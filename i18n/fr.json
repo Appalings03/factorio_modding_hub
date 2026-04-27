@@ -168,6 +168,7 @@
     "reset_confirm_required": "Cette commande supprime TOUTES les données synchronisées.\nAjoutez --confirm pour confirmer.",
     "module_missing": "Module manquant : {error}"
   },
+  
   "mods": {
     "title": "Mods — FMH",
     "page_title": "Mes Mods",
@@ -177,6 +178,28 @@
     "btn_compare": "Comparer versions",
     "no_mods": "Aucun mod importé.",
     "no_mods_hint": "Importez un fichier .zip de mod pour commencer.",
-    "delete_confirm": "Supprimer ce mod et tous ses prototypes ?"
+    "delete_confirm": "Supprimer ce mod et tous ses prototypes ?",
+    "import_title": "Importer un mod",
+    "dropzone_label": "Déposez votre .zip ici ou sélectionnez un fichier",
+    "dropzone_hint": "Mod Factorio au format .zip",
+    "btn_browse_file": "Parcourir…",
+    "btn_back": "Retour aux mods",
+    "btn_delete": "Supprimer",
+    "game_version_label": "Version Factorio (pour la fusion vanilla)",
+    "game_version_auto": "Détection automatique depuis info.json",
+    "game_version_hint": "Choisir une version permet de fusionner les prototypes du mod avec les données vanilla.",
+    "import_stat_total": "importés",
+    "import_stat_new": "nouveaux",
+    "import_stat_merged": "fusionnés avec vanilla",
+    "import_stat_skip": "ignorés",
+    "import_errors": "erreur(s)",
+    "no_file_error": "Aucun fichier sélectionné.",
+    "invalid_file_error": "Le fichier doit être une archive .zip.",
+    "filter_placeholder": "Filtrer par nom…",
+    "col_source": "Source",
+    "merged": "fusionné",
+    "new_proto": "nouveau",
+    "validated": "validé",
+    "by": "par"
   }
 }

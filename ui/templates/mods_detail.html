@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}{{ mod.name }} v{{ mod.mod_version }} — FMH{% endblock %}
+
+{% block content %}
+<div class="page-mods-detail">
+
+  <nav class="breadcrumb">
+    <a href="{{ url_for('mods_page') }}">{{ t('mods.page_title') }}</a>
+    <span class="bc-sep">›</span>
+    <span>{{ mod.name }} v{{ mod.mod_version }}</span>
+  </nav>
+
+  <div class="mods-detail-header">
+    <div>
+      <h1 class="page-title" style="margin-bottom:0.25rem">
+        {{ mod.name }}
+        <span class="muted" style="font-size:1rem">v{{ mod.mod_version }}</span>
+      </h1>
+      {% if mod.author %}
+        <p class="muted" style="font-size:0.85rem">{{ t('mods.by') }} {{ mod.author }}</p>
+      {% endif %}
+      {% if mod.description %}
+        <p style="margin-top:0.5rem; font-size:0.9rem">{{ mod.description }}</p>
+      {% endif %}
+    </div>
+    <div class="mods-detail-actions">
+      <a href="{{ url_for('mods_validate', mod_id=mod.id) }}" class="btn btn-primary">
+        ⟳ {{ t('mods.btn_validate') }}
+      </a>
+      <a href="{{ url_for('mods_delete', mod_id=mod.id) }}"
+         class="btn btn-secondary btn-danger"
+         data-confirm="{{ t('mods.delete_confirm') }}">
+        ✕ {{ t('mods.btn_delete') }}
+      </a>
+    </div>
+  </div>
+
+  {# Infos rapides #}
+  <div class="mod-info-pills">
+    <div class="stat-pill">
+      <span class="stat-num">{{ proto_count }}</span>
+      <span class="stat-label">prototypes</span>
+    </div>
+    {% if mod.game_version %}
+    <div class="stat-pill">
+      <span class="stat-num">{{ mod.game_version }}</span>
+      <span class="stat-label">Factorio</span>
+    </div>
+    {% endif %}
+    <div class="stat-pill">
+      <span class="stat-num">{% if mod.is_validated %}✓{% else %}—{% endif %}</span>
+      <span class="stat-label">{{ t('mods.validated') }}</span>
+    </div>
+  </div>
+
+  {# Filtre par typename #}
+  <div class="search-filters" style="margin-bottom:1rem">
+    <select id="type-filter" class="filter-select" onchange="filterByType(this.value)">
+      <option value="">{{ t('search.all_types') }}</option>
+      {% for tn in typenames %}
+        <option value="{{ tn }}">{{ tn }} ({{ type_counts[tn] }})</option>
+      {% endfor %}
+    </select>
+    <input type="text" id="proto-search" class="filter-input"
+           placeholder="{{ t('mods.filter_placeholder') }}"
+           oninput="filterProtos(this.value)">
+  </div>
+
+  {# Table des prototypes #}
+  <table class="results-table" id="protos-table">
+    <thead>
+      <tr>
+        <th>{{ t('search.col_name') }}</th>
+        <th>{{ t('search.col_type') }}</th>
+        <th>{{ t('search.col_localised') }}</th>
+        <th>{{ t('mods.col_source') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for proto in prototypes %}
+      <tr data-type="{{ proto.typename }}" data-name="{{ proto.name }}">
+        <td>
+          <a href="{{ url_for('mods_proto_detail', mod_id=mod.id, typename=proto.typename, name=proto.name) }}"
+             class="proto-link">{{ proto.name }}</a>
+        </td>
+        <td><span class="type-badge">{{ proto.typename }}</span></td>
+        <td class="muted">{{ proto.localised_name or '—' }}</td>
+        <td>
+          {% if proto.is_merged %}
+            <span class="merge-badge">{{ t('mods.merged') }}</span>
+          {% else %}
+            <span class="new-badge">{{ t('mods.new_proto') }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if pages > 1 %}
+  <nav class="pagination">
+    {% if page > 1 %}
+      <a href="{{ url_for('mods_detail', mod_id=mod.id, page=page-1) }}"
+         class="page-btn">{{ t('search.prev') }}</a>
+    {% endif %}
+    <span class="page-info">{{ t('search.page_of', page=page, pages=pages) }}</span>
+    {% if page < pages %}
+      <a href="{{ url_for('mods_detail', mod_id=mod.id, page=page+1) }}"
+         class="page-btn">{{ t('search.next') }}</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterByType(typename) {
+  document.querySelectorAll('#protos-table tbody tr').forEach(row => {
+    row.style.display = (!typename || row.dataset.type === typename) ? '' : 'none';
+  });
+}
+function filterProtos(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#protos-table tbody tr').forEach(row => {
+    row.style.display = (!q || row.dataset.name.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

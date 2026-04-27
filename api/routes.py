@@ -18,7 +18,7 @@ from db.schema     import init_db
 from db.repository import Repository
 from core.search_engine import SearchEngine
 from core.diff_engine   import DiffEngine
-from core.i18n import init_flask, set_language, get_language, available_languages, t as _t
+from core.i18n import t,init_flask, set_language, get_language, available_languages, t as _t
 
 logger = logging.getLogger("factorio_hub.routes")
 
@@ -257,17 +257,136 @@ def create_app(config: dict) -> Flask:
         flash(f"Mod '{mod['name']} v{mod['mod_version']}' supprimé.", "success")
         return redirect(url_for("mods_page"))
  
-    @app.route("/mods/import")
+# ------------------------------------------------------------------ #
+# MODS — import zip                                                  #
+# ------------------------------------------------------------------ #
+ 
+    @app.route("/mods/import", methods=["GET", "POST"])
     def mods_import():
-        return render_template("mods_import.html")
+        versions = repo.get_all_versions()
+ 
+        if request.method == "POST":
+            file = request.files.get("mod_file")
+            if not file or file.filename == "":
+                flash(t("mods.no_file_error"), "error")
+                return redirect(url_for("mods_import"))
+ 
+            from core.mod_importer import allowed_file, save_upload, ModImporter, ModImportError
+ 
+            if not allowed_file(file.filename):
+                flash(t("mods.invalid_file_error"), "error")
+                return redirect(url_for("mods_import"))
+ 
+            # Sauvegarde temporaire
+            upload_dir = Path(config["cache"]["dir"]) / "mod_uploads"
+            zip_path   = save_upload(file, upload_dir)
+ 
+            # Version Factorio choisie
+            game_version = request.form.get("game_version") or None
+ 
+            try:
+                importer = ModImporter(repo, Path(config["cache"]["dir"]))
+                result   = importer.import_zip(zip_path, game_version=game_version)
+            except ModImportError as e:
+                flash(str(e), "error")
+                return redirect(url_for("mods_import"))
+ 
+            return render_template("mods_import.html",
+                                   versions=versions,
+                                   import_result=result)
+ 
+        return render_template("mods_import.html",
+                               versions=versions,
+                               import_result=None)
+ 
+    # ------------------------------------------------------------------ #
+    # MODS — détail (remplace le placeholder)                              #
+    # ------------------------------------------------------------------ #
  
     @app.route("/mods/<int:mod_id>")
     def mods_detail(mod_id: int):
         mod = repo.get_mod(mod_id)
         if not mod:
             abort(404)
-        prototypes = repo.get_mod_prototypes(mod_id)
-        return render_template("mods_detail.html", mod=mod, prototypes=prototypes)
+ 
+        page      = max(1, int(request.args.get("page", 1)))
+        page_size = 100
+        offset    = (page - 1) * page_size
+ 
+        proto_count = repo.count_mod_prototypes(mod_id)
+        prototypes  = repo.get_mod_prototypes(mod_id, limit=page_size, offset=offset)
+        pages       = max(1, (proto_count + page_size - 1) // page_size)
+ 
+        # Enrichir avec flag is_merged
+        for proto in prototypes:
+            raw = {}
+            try:
+                import json as _json
+                p = repo.get_prototype(proto["typename"], proto["name"],
+                                       _get_mod_version_id(mod, repo))
+                if p:
+                    raw = p.get("raw_json", {})
+            except Exception:
+                pass
+            proto["is_merged"] = raw.get("_merged_from_vanilla", False)
+ 
+        # Comptage par type
+        type_counts = {}
+        for p in repo.get_mod_prototypes(mod_id, limit=9999):
+            type_counts[p["typename"]] = type_counts.get(p["typename"], 0) + 1
+        typenames = sorted(type_counts.keys())
+ 
+        return render_template(
+            "mods_detail.html",
+            mod=mod,
+            prototypes=prototypes,
+            proto_count=proto_count,
+            typenames=typenames,
+            type_counts=type_counts,
+            page=page,
+            pages=pages,
+        )
+ 
+    @app.route("/mods/<int:mod_id>/proto/<typename>/<name>")
+    def mods_proto_detail(mod_id: int, typename: str, name: str):
+        """Détail d'un prototype de mod — réutilise prototype_detail.html."""
+        mod = repo.get_mod(mod_id)
+        if not mod:
+            abort(404)
+        version_id = _get_mod_version_id(mod, repo)
+        prototype  = repo.get_prototype(typename, name, version_id)
+        if not prototype:
+            abort(404)
+ 
+        type_info      = repo.get_type_by_typename(typename, version_id)
+        type_props     = []
+        type_ancestors = []
+        type_children  = []
+        if type_info:
+            type_ancestors = repo.get_type_ancestors(type_info["id"])
+            type_children  = repo.get_type_children(type_info["id"])
+            type_props     = repo.get_type_properties(type_info["id"])
+ 
+        import json as _json
+        raw          = prototype["raw_json"]
+        schema_index = {p["name"]: p for p in type_props}
+        properties   = _build_property_list(raw, schema_index)
+ 
+        versions        = repo.get_all_versions()
+        current_tag     = f"mod:{mod['name']}:{mod['mod_version']}"
+ 
+        return render_template(
+            "prototype_detail.html",
+            prototype=prototype,
+            raw_json=_json.dumps(raw, indent=2, ensure_ascii=False),
+            type_info=type_info,
+            type_ancestors=type_ancestors,
+            type_children=type_children,
+            properties=properties,
+            relations_from=[],
+            relations_to=[],
+            annotations=[],
+        )
  
     @app.route("/mods/<int:mod_id>/validate")
     def mods_validate(mod_id: int):
@@ -673,3 +792,8 @@ def _toml_value(v) -> str:
     if isinstance(v, (int, float)):
         return str(v)
     return f'"{v}"'
+
+def _get_mod_version_id(mod: dict, repo) -> int | None:
+    """Retourne le version_id DB associé à un mod."""
+    version_tag = f"mod:{mod['name']}:{mod['mod_version']}"
+    return repo.get_version_id(version_tag)

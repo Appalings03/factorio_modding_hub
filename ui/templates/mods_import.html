@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}{{ t('mods.import_title') }} — FMH{% endblock %}
+
+{% block content %}
+<div class="page-mods-import">
+
+  <nav class="breadcrumb">
+    <a href="{{ url_for('mods_page') }}">{{ t('mods.page_title') }}</a>
+    <span class="bc-sep">›</span>
+    <span>{{ t('mods.import_title') }}</span>
+  </nav>
+
+  <h1 class="page-title">{{ t('mods.import_title') }}</h1>
+
+  {% if import_result %}
+  {# ── Résultat de l'import ── #}
+  <div class="import-result">
+    <div class="import-result-header {% if import_result.errors %}import-warn{% else %}import-ok{% endif %}">
+      <span class="import-result-icon">{% if import_result.errors %}⚠{% else %}✓{% endif %}</span>
+      <strong>{{ import_result.name }} v{{ import_result.version }}</strong>
+      <span class="muted">Factorio {{ import_result.game_version }}</span>
+    </div>
+
+    <div class="import-stats">
+      <div class="import-stat">
+        <span class="import-stat-num">{{ import_result.proto_count }}</span>
+        <span class="import-stat-label">{{ t('mods.import_stat_total') }}</span>
+      </div>
+      <div class="import-stat">
+        <span class="import-stat-num">{{ import_result.count_new }}</span>
+        <span class="import-stat-label">{{ t('mods.import_stat_new') }}</span>
+      </div>
+      <div class="import-stat">
+        <span class="import-stat-num">{{ import_result.count_merged }}</span>
+        <span class="import-stat-label">{{ t('mods.import_stat_merged') }}</span>
+      </div>
+      {% if import_result.count_skip %}
+      <div class="import-stat">
+        <span class="import-stat-num">{{ import_result.count_skip }}</span>
+        <span class="import-stat-label">{{ t('mods.import_stat_skip') }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if import_result.parse_errors or import_result.import_errors %}
+    <details class="import-errors">
+      <summary class="import-errors-summary">
+        {{ (import_result.parse_errors | length) + (import_result.import_errors | length) }}
+        {{ t('mods.import_errors') }}
+      </summary>
+      <ul class="import-errors-list">
+        {% for err in import_result.parse_errors %}
+          <li><span class="err-badge">parse</span> {{ err }}</li>
+        {% endfor %}
+        {% for err in import_result.import_errors %}
+          <li><span class="err-badge">import</span> {{ err }}</li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+
+    <div class="import-actions">
+      <a href="{{ url_for('mods_validate', mod_id=import_result.mod_id) }}"
+         class="btn btn-primary">
+        ⟳ {{ t('mods.btn_validate') }}
+      </a>
+      <a href="{{ url_for('mods_detail', mod_id=import_result.mod_id) }}"
+         class="btn btn-secondary">
+        {{ t('mods.btn_browse') }}
+      </a>
+      <a href="{{ url_for('mods_page') }}" class="btn btn-secondary">
+        {{ t('mods.btn_back') }}
+      </a>
+    </div>
+  </div>
+
+  {% else %}
+  {# ── Formulaire d'upload ── #}
+  <form class="import-form" action="{{ url_for('mods_import') }}"
+        method="post" enctype="multipart/form-data" id="import-form">
+
+    {# Zone drag & drop #}
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-inner">
+        <span class="dropzone-icon">⊕</span>
+        <p class="dropzone-label">{{ t('mods.dropzone_label') }}</p>
+        <p class="dropzone-hint muted">{{ t('mods.dropzone_hint') }}</p>
+        <input type="file" name="mod_file" id="mod_file"
+               accept=".zip" class="dropzone-input">
+        <label for="mod_file" class="btn btn-secondary" id="browse-btn">
+          {{ t('mods.btn_browse_file') }}
+        </label>
+        <p class="dropzone-filename muted" id="dropzone-filename"></p>
+      </div>
+    </div>
+
+    {# Options #}
+    <div class="import-options">
+      <div class="import-option">
+        <label class="form-label">{{ t('mods.game_version_label') }}</label>
+        <select name="game_version" class="filter-select">
+          <option value="">— {{ t('mods.game_version_auto') }} —</option>
+          {% for ver in versions %}
+            <option value="{{ ver.version_tag }}">{{ ver.version_tag }}</option>
+          {% endfor %}
+        </select>
+        <p class="muted" style="font-size:0.78rem; margin-top:0.3rem">
+          {{ t('mods.game_version_hint') }}
+        </p>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="import-btn" disabled>
+      ⊕ {{ t('mods.btn_import') }}
+    </button>
+  </form>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Drag & drop + preview nom de fichier
+  const dropzone  = document.getElementById('dropzone');
+  const fileInput = document.getElementById('mod_file');
+  const fileName  = document.getElementById('dropzone-filename');
+  const importBtn = document.getElementById('import-btn');
+
+  function onFileSelected(file) {
+    if (!file) return;
+    fileName.textContent = file.name;
+    if (importBtn) importBtn.disabled = false;
+    dropzone.classList.add('dropzone-ready');
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      onFileSelected(fileInput.files[0]);
+    });
+  }
+
+  if (dropzone) {
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dropzone-over');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dropzone-over');
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dropzone-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.zip')) {
+        // Injecter dans l'input
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        onFileSelected(file);
+      }
+    });
+  }
+</script>
+{% endblock %}

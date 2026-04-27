@@ -168,6 +168,7 @@
     "reset_confirm_required": "This command deletes ALL synchronized data.\nAdd --confirm to proceed.",
     "module_missing": "Missing module: {error}"
   },
+  
   "mods": {
     "title": "Mods — FMH",
     "page_title": "My Mods",
@@ -177,6 +178,28 @@
     "btn_compare": "Compare versions",
     "no_mods": "No mod imported yet.",
     "no_mods_hint": "Import a mod .zip to start.",
-    "delete_confirm": "Delete this mod and all its prototypes?"
+    "delete_confirm": "Delete this mod and all its prototypes?",
+    "import_title": "Import a mod",
+    "dropzone_label": "Drop your .zip here or select a file",
+    "dropzone_hint": "Factorio mod in .zip format",
+    "btn_browse_file": "Browse…",
+    "btn_back": "Back to mods",
+    "btn_delete": "Delete",
+    "game_version_label": "Factorio version (for vanilla merge)",
+    "game_version_auto": "Auto-detect from info.json",
+    "game_version_hint": "Choosing a version allows merging mod prototypes with vanilla data.",
+    "import_stat_total": "imported",
+    "import_stat_new": "new",
+    "import_stat_merged": "merged with vanilla",
+    "import_stat_skip": "skipped",
+    "import_errors": "error(s)",
+    "no_file_error": "No file selected.",
+    "invalid_file_error": "File must be a .zip archive.",
+    "filter_placeholder": "Filter by name…",
+    "col_source": "Source",
+    "merged": "merged",
+    "new_proto": "new",
+    "validated": "validated",
+    "by": "by"
   }
 }
