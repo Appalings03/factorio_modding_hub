@@ -388,12 +388,67 @@ def create_app(config: dict) -> Flask:
             annotations=[],
         )
  
-    @app.route("/mods/<int:mod_id>/validate")
+    # ------------------------------------------------------------------ #
+    # MODS — validation                                                  #
+    # ------------------------------------------------------------------ #
+ 
+    @app.route("/mods/<int:mod_id>/validate", methods=["GET", "POST"])
     def mods_validate(mod_id: int):
+        from core.validator import PrototypeValidator, summarize_results
+ 
+        mod      = repo.get_mod(mod_id)
+        if not mod:
+            abort(404)
+ 
+        versions = repo.get_all_versions()
+        results  = None
+        summary  = None
+ 
+        if request.method == "POST":
+            game_version = request.form.get("game_version") or mod.get("game_version")
+            if not game_version:
+                flash(t("mods.validate_no_version"), "error")
+                return redirect(url_for("mods_validate", mod_id=mod_id))
+ 
+            validator = PrototypeValidator(repo, game_version=game_version)
+            raw_results = validator.validate_mod(mod_id)
+ 
+            # Marquer comme validé en DB
+            repo.mark_mod_validated(mod_id)
+ 
+            # Sérialiser pour le template
+            results = [r.to_dict() for r in raw_results]
+            summary = summarize_results(raw_results)
+ 
+        return render_template(
+            "mods_validate.html",
+            mod=mod,
+            versions=versions,
+            results=results,
+            summary=summary,
+        )
+ 
+    # ------------------------------------------------------------------ #
+    # MODS — enregistrement permanent                                    #
+    # ------------------------------------------------------------------ #
+ 
+    @app.route("/mods/<int:mod_id>/save", methods=["POST"])
+    def mods_save_permanent(mod_id: int):
+        """
+        Marque le mod comme permanent après validation.
+        Dans notre architecture, le mod est déjà en DB —
+        cette route sert juste à confirmer et rediriger.
+        """
         mod = repo.get_mod(mod_id)
         if not mod:
             abort(404)
-        return render_template("mods_validate.html", mod=mod, results=None)
+ 
+        repo.mark_mod_validated(mod_id)
+        flash(
+            t("mods.val_saved", name=mod["name"], version=mod["mod_version"]),
+            "success"
+        )
+        return redirect(url_for("mods_detail", mod_id=mod_id))
  
     @app.route("/mods/compare/<mod_name>")
     def mods_compare_select(mod_name: str):
