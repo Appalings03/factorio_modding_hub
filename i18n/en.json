@@ -217,6 +217,6 @@
     "val_col_expected": "Expected",
     "val_save_hint": "Satisfied with this prototype? Save it permanently.",
     "val_btn_save": "Save permanently",
-  "val_saved": "Mod '{name} v{version}' saved."
+    "val_saved": "Mod '{name} v{version}' saved."
   }
 }
