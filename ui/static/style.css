@@ -1050,3 +1050,122 @@ tr:hover td { background: var(--bg-panel); }
   border-radius: var(--radius);
   font-family: var(--font-mono);
 }
+
+/* ============================================================
+   PAGE : VALIDATION
+   ============================================================ */
+
+.page-validate { max-width: 1100px; margin: 0 auto; }
+
+.validate-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.validate-launch-form { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* Résumé */
+.validate-summary {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.vs-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  min-width: 80px;
+}
+.vs-num   { font-family: var(--font-mono); font-size: 1.4rem; font-weight: bold; }
+.vs-label { font-size: 0.72rem; color: var(--text-muted); }
+.vs-ok    .vs-num { color: var(--added-text); }
+.vs-error .vs-num { color: var(--removed-text); }
+.vs-warn  .vs-num { color: var(--modified-text); }
+.vs-pct   .vs-num { color: var(--accent); }
+
+/* Filtres */
+.validate-filters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Prototypes */
+.val-proto {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.4rem;
+  overflow: hidden;
+}
+
+.val-proto-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.85rem;
+  flex-wrap: wrap;
+}
+
+.val-status-icon {
+  font-size: 0.9rem;
+  width: 1.2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+.val-ok      { color: var(--added-text); }
+.val-error   { color: var(--removed-text); }
+.val-warn    { color: var(--modified-text); }
+.val-unknown { color: var(--text-muted); }
+
+.val-proto-name { font-size: 0.85rem; color: var(--text); }
+.val-issue-counts { display: flex; gap: 0.3rem; margin-left: auto; }
+.val-toggle { margin-left: 0.25rem; padding: 0.1rem 0.4rem !important; font-size: 0.75rem !important; }
+
+/* Issues table */
+.val-issues { border-top: 1px solid var(--border-soft); }
+.val-issues-table { margin: 0; }
+.val-issues-table td { font-size: 0.82rem; padding: 0.35rem 0.75rem; }
+.val-issue-error   td { background: color-mix(in srgb, var(--removed) 20%, transparent); }
+.val-issue-warning td { background: color-mix(in srgb, var(--modified) 20%, transparent); }
+
+.val-sev-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+.val-sev-error   { background: var(--removed);  color: var(--removed-text); }
+.val-sev-warning { background: var(--modified); color: var(--modified-text); }
+.val-sev-info    { background: var(--bg-input); color: var(--text-muted); }
+
+/* Barre de sauvegarde */
+.validate-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius-lg);
+  flex-wrap: wrap;
+}
+.validate-save-bar form { display: flex; gap: 0.5rem; }
