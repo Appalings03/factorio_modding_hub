@@ -14,13 +14,11 @@
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Commands](#commands)
-  - [sync](#sync--synchronize-sources)
-  - [serve](#serve--start-the-web-interface)
-  - [status](#status--database-state)
-  - [reset](#reset--wipe-everything)
 - [Project Architecture](#project-architecture)
 - [Data Sources](#data-sources)
-- [Phase 3 — Prototype Validator](#phase-3--prototype-validator)
+- [Mod Import & Validation](#mod-import--validation)
+- [Adding a Language](#adding-a-language)
+- [Known Limitations](#known-limitations)
 - [FAQ](#faq)
 
 ---
@@ -34,8 +32,6 @@ When making a Factorio mod, you spend a lot of time hunting for answers to quest
 - *What changed in `RecipePrototype` between 1.1 and 2.0?*
 - *Which prototypes inherit from `EntityWithHealthPrototype`?*
 
-Today, answering these questions means juggling the wiki, the online API docs, the `data.raw` gist, and the GitHub Lua files — with no cross-search possible.
-
 **Factorio Modding Hub centralizes all of this locally**, in a SQLite database, exposed through a web interface that works fully offline.
 
 ### Features
@@ -43,11 +39,15 @@ Today, answering these questions means juggling the wiki, the online API docs, t
 | Feature | Description |
 |---|---|
 | **Prototype search** | Find `assembling-machine-1` or all prototypes of type `recipe` in one query |
-| **Prototype detail** | View all properties of a prototype, with their expected type and description from the official docs |
+| **Prototype detail** | View all properties, expected types and descriptions from official docs |
 | **Inheritance navigation** | Walk up or down the inheritance tree (`RecipePrototype` → `PrototypeBase`) |
 | **Cross-references** | See which prototypes use a given item as ingredient, fuel, module, etc. |
-| **Version comparison** | Diff prototype properties between two Factorio versions (e.g. 1.1.107 vs 2.0.65) |
+| **Version comparison** | Diff prototype properties between two Factorio versions |
+| **Mod import** | Import a `.zip` mod, parse its Lua files, merge with vanilla data |
+| **Mod validation** | Validate mod prototypes against the official schema |
+| **Mod comparison** | Diff two versions of the same mod |
 | **Personal annotations** | Take notes on a prototype, add tags (`todo`, `bug`, `important`) |
+| **Multilingual UI** | Interface available in English and French (extensible) |
 | **Offline browsing** | Once synced, everything works without internet |
 
 ---
@@ -58,7 +58,6 @@ Today, answering these questions means juggling the wiki, the online API docs, t
 - **pip**
 - A GitHub token (optional but recommended for the GitHub source)
 
-Check your Python version:
 ```bash
 python --version
 ```
@@ -69,17 +68,13 @@ python --version
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-account/factorio-modding-hub.git
-cd factorio-modding-hub
+git clone https://github.com/Appalings03/factorio_modding_hub.git
+cd factorio_modding_hub
 
 # 2. Create a virtual environment (recommended)
 python -m venv .venv
-
-# Linux / macOS
-source .venv/bin/activate
-
-# Windows
-.venv\Scripts\activate
+.venv\Scripts\activate       # Windows
+source .venv/bin/activate    # Linux / macOS
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -91,49 +86,44 @@ python main.py sync
 python main.py serve
 ```
 
-The interface opens automatically in your browser at `http://127.0.0.1:5000`.
+The interface opens automatically at `http://127.0.0.1:5000`.
 
 ---
 
 ## Configuration
 
-Create `config/settings.toml` to customize the app's behavior.  
-All keys are optional — the defaults work out of the box.
+Create `config/settings.toml` to customize behavior. All keys are optional.
 
 ```toml
 # config/settings.toml
 
 [sources]
-# GitHub personal token (optional but strongly recommended)
-# Without token: 60 req/h limit → enough for 1 version
-# With token: 5000 req/h → comfortable for multiple versions
-# Create one at: https://github.com/settings/tokens (scope "public_repo")
+# GitHub personal token — create at https://github.com/settings/tokens (scope: public_repo)
+# Without token: 60 req/h · With token: 5000 req/h
 github_token = "ghp_xxxxxxxxxxxxxxxxxxxx"
 
-# URL of the data.raw dump (community gist referenced by the official wiki)
-gist_url = "https://gist.githubusercontent.com/Bilka2/6b8a6a9e4a4ec779573ad703d03c1ae7/raw"
-
-# Wube machine-readable API URL
+gist_url          = "https://gist.githubusercontent.com/Bilka2/6b8a6a9e4a4ec779573ad703d03c1ae7/raw"
 prototype_api_url = "https://lua-api.factorio.com/latest/prototype-api.json"
 
 [database]
-# Path to the SQLite database (relative to project or absolute)
-path = "data/factorio_hub.db"
+path = "data/factorio_hub.db"    # relative or absolute path
 
 [cache]
-# Cache folder for downloaded files
 dir = "data/cache"
 
 [server]
-host  = "127.0.0.1"   # Use "0.0.0.0" to expose on local network
+host  = "127.0.0.1"   # use "0.0.0.0" to expose on local network
 port  = 5000
-debug = false          # true = auto-reload (dev only)
+debug = false
+
+[ui]
+language = "en"       # "en" or "fr" — change here or via the UI language selector
 ```
 
-The GitHub token can also be provided via environment variable (takes priority):
+GitHub token can also be set via environment variable:
 ```bash
-export GITHUB_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxx"
-python main.py sync --source github --version 2.0.65
+set GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx   # Windows
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx # Linux/macOS
 ```
 
 ---
@@ -142,40 +132,28 @@ python main.py sync --source github --version 2.0.65
 
 ### `sync` — Synchronize sources
 
-Downloads and imports data into the local SQLite database.
-
 ```bash
-# Default: syncs both main sources (recommended to start)
-python main.py sync
-
-# All sources including GitHub
-python main.py sync --all
-
-# Specific source
-python main.py sync --source api_docs       # type schema only (~5s)
-python main.py sync --source raw_data       # vanilla instances (~20MB, 1-2min)
-python main.py sync --source github --version 2.0.65
-
-# Force re-download ignoring cache
-python main.py sync --force
-
-# Stop on first error (default: log and continue)
-python main.py sync --all --fail-fast
+python main.py sync                                    # api_docs + raw_data (default)
+python main.py sync --all                              # all sources incl. GitHub
+python main.py sync --source api_docs                  # type schema only (~5s)
+python main.py sync --source raw_data                  # vanilla instances (~1-2min)
+python main.py sync --source raw_data --version 2.0.76 # force version tag in DB
+python main.py sync --source github --version 2.0.76   # GitHub Lua files
+python main.py sync --source github --version 2.0.76 --force  # re-download cache
+python main.py sync --fail-fast                        # stop on first error
 ```
 
-> **Note on GitHub sync:** without a token, the GitHub API is limited to 60 req/h. One full version is ~200 Lua files. With a personal token (free), the limit rises to 5000/h. Sync is idempotent — already-downloaded files are skipped.
+> **Tip:** After first sync, run `sync --source raw_data --version 2.0.76` to align the raw_data version with api_docs.
 
 ### `serve` — Start the web interface
 
 ```bash
-python main.py serve                         # opens browser automatically
+python main.py serve
 python main.py serve --port 8080
 python main.py serve --no-browser
-python main.py serve --debug                 # auto-reload on code change
-python main.py serve --host 0.0.0.0         # expose on local network
+python main.py serve --debug
+python main.py serve --host 0.0.0.0   # expose on local network
 ```
-
-Stop the server: `Ctrl+C`.
 
 ### `status` — Database state
 
@@ -183,16 +161,13 @@ Stop the server: `Ctrl+C`.
 python main.py status
 ```
 
-Shows synced versions, row counts per table, and cache state.
-
 ### `reset` — Wipe everything
 
 ```bash
 python main.py reset --confirm
 ```
 
-Deletes the database and all caches. The `--confirm` flag is required.  
-**Warning:** this also deletes all personal annotations.
+**Warning:** deletes database and all caches including personal annotations.
 
 ---
 
@@ -201,114 +176,146 @@ Deletes the database and all caches. The `--confirm` flag is required.
 ```
 factorio_modding_hub/
 ├── config/
-│   └── settings.toml          # User configuration (create this)
+│   └── settings.toml          # User configuration
 ├── data/
-│   ├── factorio_hub.db        # SQLite database (generated by sync)
-│   └── cache/                 # Downloaded files
-│       ├── raw_data/          # data.raw gist (~20 MB)
-│       ├── api_docs/          # prototype-api.json
-│       └── github/            # Lua files by version
+│   ├── factorio_hub.db        # SQLite database
+│   ├── cache/                 # Downloaded files
+│   │   ├── raw_data/
+│   │   ├── api_docs/
+│   │   ├── github/
+│   │   └── mod_uploads/       # Uploaded mod zips
+│   └── logs/                  # GitHub sync skip logs
+├── i18n/
+│   ├── en.json                # English translations
+│   └── fr.json                # French translations
 ├── scrapers/
-│   ├── base_scraper.py        # Abstract base class
-│   ├── raw_data_scraper.py    # data.raw gist
-│   ├── github_scraper.py      # GitHub API + Lua files
-│   └── api_docs_scraper.py    # prototype-api.json
+│   ├── base_scraper.py
+│   ├── raw_data_scraper.py
+│   ├── github_scraper.py
+│   └── api_docs_scraper.py
 ├── parsers/
-│   ├── lua_json_parser.py     # Simplified Lua parser
-│   ├── prototype_parser.py    # Normalization to DB schema
-│   └── inheritance_resolver.py # Inheritance tree resolution
+│   ├── lua_json_parser.py
+│   ├── prototype_parser.py
+│   └── inheritance_resolver.py
 ├── db/
-│   ├── schema.py              # CREATE TABLE, init_db()
-│   ├── repository.py          # CRUD layer (Repository pattern)
-│   └── migrations/            # Versioned SQL scripts
+│   ├── schema.py
+│   ├── repository.py
+│   └── migrations/
+│       ├── 001_initial.sql
+│       ├── 002_annotations.sql
+│       └── 003_mods.sql
 ├── core/
-│   ├── sync_manager.py        # Sync pipeline orchestration
-│   ├── search_engine.py       # FTS search + filters
-│   ├── diff_engine.py         # Cross-version comparison
-│   └── validator.py           # Phase 3 stub: prototype checker
+│   ├── sync_manager.py
+│   ├── search_engine.py
+│   ├── diff_engine.py
+│   ├── validator.py
+│   ├── mod_importer.py
+│   └── i18n.py
 ├── api/
-│   └── routes.py              # Flask endpoints
+│   └── routes.py
 ├── ui/
-│   ├── templates/             # Jinja2 HTML templates
-│   └── static/                # CSS + JS
-├── main.py                    # CLI entry point
+│   ├── templates/
+│   └── static/
+├── tests/
+├── main.py
 ├── requirements.txt
-├── README.md                  # This file (English)
-└── README.fr.md               # French version
+├── RAPPORT.md
+├── TODO.md
+├── README.md
+└── README.fr.md
 ```
 
 ---
 
 ## Data Sources
 
-### 1. `data.raw` Gist (wiki.factorio.com)
+### 1. `data.raw` Gist
+A 20 MB JSON dump of the complete `data.raw` with Space Age (version 2.0.65). Concrete runtime values of all vanilla prototypes.
 
-A 20 MB JSON dump of the complete `data.raw` with Space Age enabled (version 2.0.65). This is the exact serialization of what Factorio loads into memory at startup.
-
-**What we get:** concrete values of all vanilla prototypes — `crafting_speed`, `stack_size`, `ingredients`, `results`, etc.
-
-### 2. `prototype-api.json` (lua-api.factorio.com)
-
-The official Wube machine-readable JSON describing the schema of all prototype types — which properties they accept, their types, default values, and inheritance hierarchy.
-
-**What we get:** the complete schema (`RecipePrototype` inherits from `PrototypeBase`, the `category` property is of type `RecipeCategoryID`, optional with default `"crafting"`…).
+### 2. `prototype-api.json`
+Official Wube machine-readable JSON — schema of all prototype types, properties, types, inheritance.
 
 ### 3. GitHub `wube/factorio-data`
-
-The official Wube repository containing the Lua source files for base prototypes (`base/prototypes/`, `core/prototypes/`, `space-age/prototypes/`), tagged by Factorio version.
-
-**What we get:** the source of truth for cross-version comparison — exact diffs between tags.
+Official Lua source files for base prototypes, tagged by version. Includes `base/`, `core/`, `space-age/`, `elevated-rail/`, `quality/`.
 
 ---
 
-## Phase 3 — Prototype Validator
+## Mod Import & Validation
 
-Planned feature — validate a mod prototype against the official schema before launching Factorio:
+### Import a mod
 
-```python
-# Intended usage (phase 3)
-from core.validator import PrototypeValidator
+1. Go to **Mods** → **Import a mod**
+2. Drop your `.zip` file or click Browse
+3. Select the target Factorio version (for vanilla merge)
+4. Click Import
 
-validator = PrototypeValidator(repo, version="2.0.65")
-errors = validator.validate({
-    "type": "recipe",
-    "name": "my-custom-recipe",
-    "ingredients": [{"type": "item", "name": "iron-plate", "amount": 5}],
-    # "results" missing → error detected
-})
-# → [ValidationError(property_path="results", severity="error", ...)]
-```
+The importer reads `data.lua`, `data-updates.lua`, `data-final-fixes.lua` in order, merges prototypes that extend vanilla ones, and stores everything in a separate DB version (`mod:name:version`).
 
-Already in place for phase 3:
-- `raw_json` in `prototypes` table — intact source of truth
-- `type_properties` with `type_str` and `is_optional` — validation schema ready
-- `data_types` — sub-types for recursive validation
-- `prototype_relations` — dependency graph for cross-reference checks
-- `core/validator.py` — documented stub, ready to implement
+### Validate a mod
+
+After import, click **Validate** to check prototypes against the official schema:
+- **Errors** — required properties missing
+- **Warnings** — unexpected type, broken vanilla references
+- **Info** — type not found in official schema
+
+Once satisfied, click **Save permanently** to mark the mod as validated.
+
+### Compare mod versions
+
+If you have imported multiple versions of the same mod, click **Compare versions** to see which prototypes were added, removed, or modified between versions.
+
+### Known limitations
+
+- `table.deepcopy()` patterns are not resolved — prototypes generated programmatically may be missing
+- Settings types (`int-setting`, `bool-setting`, etc.) show as "unknown schema" — partial validation only
+- Inherited properties are not always shown in validation results
+
+---
+
+## Adding a Language
+
+1. Copy `i18n/en.json` → `i18n/xx.json` (replace `xx` with your language code)
+2. Translate all values (keep the keys unchanged)
+3. Fill in the `meta` section:
+   ```json
+   "meta": {
+     "name": "German",
+     "native_name": "Deutsch",
+     "flag": "🇩🇪"
+   }
+   ```
+4. Change `[ui] language = "xx"` in `config/settings.toml`
+
+No code changes needed. The language selector in the header will automatically pick up the new file.
+
+---
+
+## Known Limitations
+
+| Limitation | Impact | Planned fix |
+|---|---|---|
+| `table.deepcopy()` not resolved in Lua parser | Mod prototypes generated programmatically may be missing | TODO VAL03 |
+| Settings types (`*-setting`) not in official schema | Validator shows "unknown type" for all settings | TODO VAL01 |
+| Inherited properties not always validated | Validation incomplete for inherited required fields | TODO VAL02 |
+| `is_latest` not set automatically after sync | Empty UI after first sync — must set manually | TODO B01 |
 
 ---
 
 ## FAQ
 
 **Does the app work without internet?**  
-Yes, once `sync` has been run. All data is stored locally in `data/factorio_hub.db`. The Flask server is purely local.
+Yes, once `sync` has run.
 
 **How long does synchronization take?**  
-- `api_docs` only: ~5 seconds
-- `raw_data` only: 30 seconds to 2 minutes (20 MB download + import)
-- `github` (1 version): 2 to 10 minutes depending on token and connection
+- `api_docs` : ~5 seconds
+- `raw_data` : 30s to 2 minutes
+- `github` (1 version) : 2 to 10 minutes
 
-**Does the data.raw gist cover Space Age?**  
-Yes. The referenced gist corresponds to Factorio 2.0.65 with the Space Age DLC active.
-
-**Can multiple versions coexist?**  
-Yes. Each synced version creates separate rows linked by `version_id`. Cross-version comparison is natively supported.
+**The app shows nothing after sync — why?**  
+No version is marked as active. Open the homepage, use the version selector dropdown to pick your version, or run `fix_latest.py`.
 
 **Is a GitHub token required?**  
-No, but strongly recommended for the GitHub source. Without a token, the API is limited to 60 req/h — syncing one version (~200 Lua files) can hit this limit. A free personal token raises it to 5000/h.
+No, but strongly recommended (60 req/h without, 5000/h with).
 
 **Do my annotations survive `sync --force`?**  
-Yes. Annotations are in a separate table and never overwritten by a re-sync.
-
-**What about `reset`?**  
-No — `reset --confirm` deletes the entire database including annotations. Export your annotations first if needed.
+Yes. They survive everything except `reset --confirm`.
