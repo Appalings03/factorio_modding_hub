@@ -7,7 +7,7 @@
 
 ## 🔴 Bugs critiques
 
-- [ ] **B01** — Automatiser `set_latest_version()` dans `sync_manager`  
+- [x] **B01** — Automatiser `set_latest_version()` dans `sync_manager`  
   Dans `sync_raw_data()` et `sync_github()`, ajouter à la fin :
   ```python
   self.repo.set_latest_version(actual_version)

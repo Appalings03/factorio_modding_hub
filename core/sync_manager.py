@@ -113,7 +113,8 @@ class SyncManager:
         self.repo.extract_relations(version_id)
 
         print(f"[sync] data.raw importé : {count} prototypes (version: {actual_version})")
-
+        self.repo.set_latest_version(actual_version)
+        
     # ------------------------------------------------------------------ #
     # Étape 3 : GitHub Lua → DB                                           #
     # ------------------------------------------------------------------ #
@@ -210,3 +211,4 @@ class SyncManager:
             f"[sync] GitHub {version_tag} importé : "
             f"{count_ok} prototypes, {len(skipped)} skippés, {count_err} erreurs"
         )
+        self.repo.set_latest_version(github_version)
