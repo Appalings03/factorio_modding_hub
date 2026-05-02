@@ -34,6 +34,7 @@ def create_app(config: dict) -> Flask:
         static_folder=str(Path(__file__).parent.parent / "ui" / "static"),
     )
     app.secret_key = "fmh-local-secret-not-for-prod"
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
     
     from core.i18n import init_from_config, init_flask
     init_from_config(config)

@@ -110,7 +110,7 @@
   # WHERE typename IN (...)
   ```
 
-- [ ] **PERF03** — Ajouter `MAX_CONTENT_LENGTH` dans `create_app()`  
+- [x] **PERF03** — Ajouter `MAX_CONTENT_LENGTH` dans `create_app()`  
   ```python
   app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
   ```
