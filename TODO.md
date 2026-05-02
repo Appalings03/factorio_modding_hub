@@ -13,7 +13,7 @@
   self.repo.set_latest_version(actual_version)
   ```
 
-- [ ] **B02** — `_compute_mod_diff()` : tags incorrects pour `diff_engine`  
+- [x] **B02** — `_compute_mod_diff()` : tags incorrects pour `diff_engine`  
   Dans `routes.py`, remplacer :
   ```python
   # AVANT

@@ -513,6 +513,7 @@ def create_app(config: dict) -> Flask:
                     vid_a, vid_b,
                     version_a, version_b,
                     current_typename,
+                    mod_name,
                 )
  
         return render_template(
@@ -929,6 +930,7 @@ def _compute_mod_diff(
     vid_a: int, vid_b: int,
     version_a: str, version_b: str,
     typename_filter: str | None,
+    mod_name: str,
 ) -> tuple[list[dict], dict]:
     """
     Compare tous les prototypes entre deux versions d'un mod.
@@ -984,10 +986,10 @@ def _compute_mod_diff(
  
     # Prototypes communs — diff des propriétés
     for typename, name in sorted(common_keys):
-        tag_a = f"mod_version_a_{vid_a}"  # clés internes pour diff_engine
-        tag_b = f"mod_version_b_{vid_b}"
- 
-        raw_diff = diff_engine.diff_prototype(typename, name, version_a, version_b)
+        tag_a = f"mod:{mod_name}:{version_a}"
+        tag_b = f"mod:{mod_name}:{version_b}"
+
+        raw_diff = diff_engine.diff_prototype(typename, name, tag_a, tag_b)
         d = diff_engine.to_dict(raw_diff)
  
         if not raw_diff.has_changes:
