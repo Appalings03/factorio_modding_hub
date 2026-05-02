@@ -18,7 +18,7 @@ from db.schema     import init_db
 from db.repository import Repository
 from core.search_engine import SearchEngine
 from core.diff_engine   import DiffEngine
-from core.i18n import t,init_flask, set_language, get_language, available_languages, t as _t
+from core.i18n import t, init_flask, set_language, get_language, available_languages
 
 logger = logging.getLogger("factorio_hub.routes")
 
